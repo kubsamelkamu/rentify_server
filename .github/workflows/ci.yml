@@ -24,7 +24,7 @@ jobs:
       - name: Run Prisma Migrations
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
-        run: npx prisma migrate deploy
+        run: npx prisma migrate deploy  --schema=./src/prisma/schema.prisma
       - name: Lint
         run: npm run lint
       - name: Run Tests
