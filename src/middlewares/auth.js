@@ -1,6 +1,6 @@
 import { verify } from 'jsonwebtoken';
 
-function auth(req, res, next) {
+function authenticate(req, res, next) {
   
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'No token provided' });
@@ -14,4 +14,4 @@ function auth(req, res, next) {
   }
 }
 
-export default auth;
+export default authenticate;
