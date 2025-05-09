@@ -1,12 +1,13 @@
-import { verify } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 
-function authenticate(req, res, next) {
-  
+function auth(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'No token provided' });
+
   const [, token] = authHeader.split(' ');
+
   try {
-    const payload = verify(token, process.env.JWT_SECRET);
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
     req.user = payload;
     next();
   } catch {
@@ -14,4 +15,4 @@ function authenticate(req, res, next) {
   }
 }
 
-export default authenticate;
+export default auth;
