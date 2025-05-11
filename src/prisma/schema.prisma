@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../node_modules/@prisma/client"
 }
 
 datasource db {
@@ -24,6 +23,7 @@ enum PropertyType {
   APARTMENT
   HOUSE
   STUDIO
+  VILLA
 }
 
 enum BookingStatus {
@@ -95,6 +95,8 @@ model PropertyImage {
   propertyId String
   fileName   String
   publicId   String?
+  url        String
+
   createdAt  DateTime @default(now())
 }
 
