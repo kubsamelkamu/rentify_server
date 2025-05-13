@@ -41,8 +41,8 @@ export const getAllProperties = async (req, res) => {
 
     const {city,minPrice,maxPrice,minBedrooms,maxBedrooms,propertyType,amenities,page,limit,} = req.query;
 
-    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
-    const limitNum = Math.max(parseInt(limit, 10) || 10, 1);
+    const pageNum = Math.max(parseInt(page, 9) || 1, 1);
+    const limitNum = Math.max(parseInt(limit, 9) || 9, 1);
     const skip = (pageNum - 1) * limitNum;
 
     const where = {};
