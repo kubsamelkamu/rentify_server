@@ -38,16 +38,67 @@ export const createProperty = async (req, res) => {
 
 export const getAllProperties = async (req, res) => {
   try {
-    const properties = await prisma.property.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: {
-        landlord: { select: { id: true, name: true, email: true } },
-        images: true,
-      },
+
+    const {city,minPrice,maxPrice,minBedrooms,maxBedrooms,propertyType,amenities,page,limit,} = req.query;
+
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+    const limitNum = Math.max(parseInt(limit, 10) || 10, 1);
+    const skip = (pageNum - 1) * limitNum;
+
+    const where = {};
+
+    if (typeof city === 'string' && city.trim()) {
+      where.city = { contains: city.trim(), mode: 'insensitive' };
+    }
+
+    if (minPrice || maxPrice) {
+      where.rentPerMonth = {};
+      if (minPrice) where.rentPerMonth.gte = parseFloat(minPrice);
+      if (maxPrice) where.rentPerMonth.lte = parseFloat(maxPrice);
+    }
+
+    if (minBedrooms || maxBedrooms) {
+      where.numBedrooms = {};
+      if (minBedrooms) where.numBedrooms.gte = parseInt(minBedrooms, 10);
+      if (maxBedrooms) where.numBedrooms.lte = parseInt(maxBedrooms, 10);
+    }
+
+    if (propertyType && typeof propertyType === 'string') {
+      where.propertyType = propertyType;
+    }
+
+    if (amenities && typeof amenities === 'string') {
+      const list = amenities
+        .split(',')
+        .map((a) => a.trim())
+        .filter(Boolean);
+      if (list.length) {
+        where.amenities = { hasEvery: list };
+      }
+    }
+
+    const [total, data] = await Promise.all([
+      prisma.property.count({ where }),
+      prisma.property.findMany({
+        where,
+        skip,
+        take: limitNum,
+        orderBy: { createdAt: 'asc' }, 
+        include: {
+          landlord: { select: { id: true, name: true, email: true } },
+          images: true,
+        },
+      }),
+    ]);
+
+    return res.json({
+      data,
+      total,
+      page: pageNum,
+      limit: limitNum,
     });
-    return res.json(properties);
-  } catch (error) {
-    return res.status(500).json(error.message);
+  } catch{
+    return res.status(500).json({ error: 'Could not fetch properties' });
   }
 };
 
@@ -61,6 +112,7 @@ export const getPropertyById = async (req, res) => {
         images: true,
       },
     });
+
     if (!property) {
       return res.status(404).json({ error: 'Property not found' });
     }
@@ -71,6 +123,7 @@ export const getPropertyById = async (req, res) => {
 };
 
 export const updateProperty = async (req, res) => {
+
   const { id } = req.params;
   const { userId } = req.user;
 
@@ -106,6 +159,7 @@ export const updateProperty = async (req, res) => {
 };
 
 export const deleteProperty = async (req, res) => {
+
   const { id } = req.params;
   const { role, userId } = req.user;
 
@@ -142,6 +196,7 @@ export const deleteProperty = async (req, res) => {
 };
 
 export const uploadPropertyImages = async (req, res) => {
+
   const { id } = req.params;
   const { role, userId } = req.user;
 
@@ -157,7 +212,6 @@ export const uploadPropertyImages = async (req, res) => {
   }
 
   try {
-
     const uploadResults = await Promise.all(
       req.files.map((file) =>
         new Promise((resolve, reject) => {
