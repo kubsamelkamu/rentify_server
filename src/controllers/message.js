@@ -11,7 +11,6 @@ export const sendMessage = async (req, res) => {
   }
 
   try {
-
     const property = await prisma.property.findUnique({
       where: { id: propertyId },
       select: { landlordId: true },
@@ -32,7 +31,7 @@ export const sendMessage = async (req, res) => {
     });
 
     return res.status(201).json(message);
-  } catch {
+  }catch {
     return res.status(500).json({ error: 'Could not send message' });
   }
 };
