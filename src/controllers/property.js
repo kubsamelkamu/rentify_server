@@ -7,11 +7,11 @@ export const createProperty = async (req, res) => {
     return res.status(403).json({ error: 'Only landlords can create properties' });
   }
 
-  const {title,description,city,rentPerMonth,numBedrooms,numBathrooms,propertyType,
-    amenities,} = req.body;
+  const {title,description,city,rentPerMonth,numBedrooms,numBathrooms,propertyType,amenities,
+  } = req.body;
 
-  if ( !title ||!description ||!city ||rentPerMonth == null ||numBedrooms == null ||
-    numBathrooms == null || !propertyType || !Array.isArray(amenities)
+  if (!title ||!description ||!city ||rentPerMonth == null ||numBedrooms == null ||
+    numBathrooms == null ||!propertyType ||!Array.isArray(amenities)
   ) {
     return res.status(400).json({ error: 'All fields are required and must be valid' });
   }
@@ -30,19 +30,20 @@ export const createProperty = async (req, res) => {
         landlord: { connect: { id: landlordId } },
       },
     });
-    return res.status(201).json(newProperty);
-  } catch (error) {
-    return res.status(500).json(error.message);
+    res.status(201).json(newProperty);
+  } catch{
+    res.status(500).json({ error: 'Could not create property' });
   }
 };
 
 export const getAllProperties = async (req, res) => {
+
   try {
+    const {city,minPrice,maxPrice,minBedrooms,maxBedrooms,propertyType,amenities,page,limit,
+    } = req.query;
 
-    const {city,minPrice,maxPrice,minBedrooms,maxBedrooms,propertyType,amenities,page,limit,} = req.query;
-
-    const pageNum = Math.max(parseInt(page, 9) || 1, 1);
-    const limitNum = Math.max(parseInt(limit, 9) || 9, 1);
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+    const limitNum = Math.max(parseInt(limit, 10) || 9, 1);
     const skip = (pageNum - 1) * limitNum;
 
     const where = {};
@@ -50,23 +51,19 @@ export const getAllProperties = async (req, res) => {
     if (typeof city === 'string' && city.trim()) {
       where.city = { contains: city.trim(), mode: 'insensitive' };
     }
-
     if (minPrice || maxPrice) {
       where.rentPerMonth = {};
       if (minPrice) where.rentPerMonth.gte = parseFloat(minPrice);
       if (maxPrice) where.rentPerMonth.lte = parseFloat(maxPrice);
     }
-
     if (minBedrooms || maxBedrooms) {
       where.numBedrooms = {};
       if (minBedrooms) where.numBedrooms.gte = parseInt(minBedrooms, 10);
       if (maxBedrooms) where.numBedrooms.lte = parseInt(maxBedrooms, 10);
     }
-
     if (propertyType && typeof propertyType === 'string') {
       where.propertyType = propertyType;
     }
-
     if (amenities && typeof amenities === 'string') {
       const list = amenities
         .split(',')
@@ -83,7 +80,7 @@ export const getAllProperties = async (req, res) => {
         where,
         skip,
         take: limitNum,
-        orderBy: { createdAt: 'asc' }, 
+        orderBy: { createdAt: 'desc' },
         include: {
           landlord: { select: { id: true, name: true, email: true } },
           images: true,
@@ -91,15 +88,10 @@ export const getAllProperties = async (req, res) => {
       }),
     ]);
 
-    return res.json({
-      data,
-      total,
-      page: pageNum,
-      limit: limitNum,
-    });
+    res.json({ data, total, page: pageNum, limit: limitNum });
   } catch{
-    return res.status(500).json({ error: 'Could not fetch properties' });
-  }
+    res.status(500).json({ error: 'Could not fetch properties' });
+  } 
 };
 
 export const getPropertyById = async (req, res) => {
@@ -110,20 +102,27 @@ export const getPropertyById = async (req, res) => {
       include: {
         landlord: { select: { id: true, name: true, email: true } },
         images: true,
+        Message: {
+          include: {
+            sender: { select: { id: true, name: true } },
+          },
+          orderBy: { sentAt: 'asc' },
+        },
       },
     });
 
     if (!property) {
       return res.status(404).json({ error: 'Property not found' });
     }
-    return res.json(property);
-  } catch (error) {
-    return res.status(500).json(error.message);
+
+    const { Message, ...rest } = property;
+    res.json({ ...rest, messages: Message });
+  } catch {
+    res.status(500).json({ error: 'Could not fetch property' });
   }
 };
 
 export const updateProperty = async (req, res) => {
-
   const { id } = req.params;
   const { userId } = req.user;
 
@@ -136,8 +135,8 @@ export const updateProperty = async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to update this property' });
     }
 
-    const {title,description,city,rentPerMonth,numBedrooms,numBathrooms,
-      propertyType,amenities,} = req.body;
+    const {title,description,city,rentPerMonth,numBedrooms,numBathrooms,propertyType,amenities,
+    } = req.body;
 
     const updated = await prisma.property.update({
       where: { id },
@@ -152,9 +151,10 @@ export const updateProperty = async (req, res) => {
         amenities,
       },
     });
-    return res.json(updated);
-  } catch (error) {
-    return res.status(500).json(error.message);
+
+    res.json(updated);
+  } catch {
+    res.status(500).json({ error: 'Could not update property' });
   }
 };
 
@@ -168,30 +168,18 @@ export const deleteProperty = async (req, res) => {
     if (!property) {
       return res.status(404).json({ error: 'Property not found' });
     }
-
     if (property.landlordId !== userId && role !== 'ADMIN') {
       return res.status(403).json({ error: 'Not authorized to delete this property' });
     }
 
-    const images = await prisma.propertyImage.findMany({
-      where: { propertyId: id },
-    });
-
-    await Promise.all(
-      images.map((image) =>
-        cloudinary.uploader.destroy(image.publicId)
-      )
-    );
-
-    await prisma.propertyImage.deleteMany({
-      where: { propertyId: id },
-    });
-
+    const images = await prisma.propertyImage.findMany({ where: { propertyId: id } });
+    await Promise.all(images.map((img) => cloudinary.uploader.destroy(img.publicId)));
+    await prisma.propertyImage.deleteMany({ where: { propertyId: id } });
     await prisma.property.delete({ where: { id } });
-    return res.json({ message: 'Property and its images deleted successfully' });
 
-  } catch (error) {
-    return res.status(500).json(error.message);
+    res.json({ message: 'Property and its images deleted successfully' });
+  } catch{
+    res.status(500).json({ error: 'Could not delete property' });
   }
 };
 
@@ -201,29 +189,30 @@ export const uploadPropertyImages = async (req, res) => {
   const { role, userId } = req.user;
 
   const property = await prisma.property.findUnique({ where: { id } });
-  if (!property) return res.status(404).json({ error: 'Property not found' });
-
+  if (!property) {
+    return res.status(404).json({ error: 'Property not found' });
+  }
   if (property.landlordId !== userId && role !== 'ADMIN') {
     return res.status(403).json({ error: 'Not authorized to upload images' });
   }
-
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({ error: 'No images provided' });
   }
 
   try {
     const uploadResults = await Promise.all(
-      req.files.map((file) =>
-        new Promise((resolve, reject) => {
-          const stream = cloudinary.uploader.upload_stream(
-            { folder: 'properties' },
-            (error, result) => {
-              if (error) return reject(error);
-              resolve({ result, originalName: file.originalname });
-            }
-          );
-          stream.end(file.buffer);
-        })
+      req.files.map(
+        (file) =>
+          new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+              { folder: 'properties' },
+              (error, result) => {
+                if (error) return reject(error);
+                resolve({ result, originalName: file.originalname });
+              }
+            );
+            stream.end(file.buffer);
+          })
       )
     );
 
@@ -234,15 +223,14 @@ export const uploadPropertyImages = async (req, res) => {
             property: { connect: { id } },
             url: result.secure_url,
             publicId: result.public_id,
-            fileName: originalName,        
+            fileName: originalName,
           },
         })
       )
     );
 
-    return res.json(savedImages);
-  } catch (error) {
-    return res.status(500).json(error.message);
+    res.json(savedImages);
+  } catch {
+    res.status(500).json({ error: 'Could not upload images' });
   }
 };
-
