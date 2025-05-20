@@ -8,7 +8,6 @@ dotenv.config();
 
 const httpServer = http.createServer(app);
 
-
 export const io = new SocketIOServer(httpServer, {
   cors: {
     origin: process.env.FRONTEND_URL,
@@ -26,67 +25,90 @@ io.use((socket, next) => {
     const payload = jwt.verify(token, JWT_SECRET);
     socket.user = { id: payload.userId };
     next();
-  } catch{
+  } catch {
     next(new Error('Authentication error: invalid token'));
   }
 });
 
 io.on('connection', (socket) => {
+  console.log(`✅ User connected: ${socket.user.id}`);
 
   socket.on('joinRoom', (propertyId) => {
     socket.join(propertyId);
+    io.to(propertyId).emit('presence', {
+      userId: socket.user.id,
+      status: 'online',
+    });
   });
 
   socket.on('leaveRoom', (propertyId) => {
     socket.leave(propertyId);
+    io.to(propertyId).emit('presence', {
+      userId: socket.user.id,
+      status: 'offline',
+    });
   });
 
-  socket.on(
-    'sendMessage',
-    async ({ propertyId, content }, callback) => {
-      try {
-        const prop = await prisma.property.findUnique({
-          where: { id: propertyId },
-          select: { landlordId: true },
-        });
-        if (!prop) {
-          socket.emit('error', 'Property not found');
-          return callback && callback(null);
-        }
+  socket.on('typing', ({ propertyId, isTyping }) => {
+    socket.to(propertyId).emit('typingStatus', {
+      userId: socket.user.id,
+      isTyping,
+    });
+  });
 
-        const senderId = socket.user.id;
-        const receiverId = prop.landlordId;
+  socket.on('sendMessage', async ({ propertyId, content }, callback) => {
+    try {
+      const prop = await prisma.property.findUnique({
+        where: { id: propertyId },
+        select: { landlordId: true },
+      });
+      if (!prop) {
+        socket.emit('error', 'Property not found');
+        return callback && callback(null);
+      }
 
-        const message = await prisma.message.create({
-          data: {
-            content,
-            property: { connect: { id: propertyId } },
-            sender:   { connect: { id: senderId } },
-            receiver: { connect: { id: receiverId } },
-          },
-          include: {
-            sender: { select: { id: true, name: true } },
-          },
-        });
+      const senderId = socket.user.id;
+      const receiverId = prop.landlordId;
 
-        io.to(propertyId).emit('newMessage', message);
-        if (typeof callback === 'function') {
-          callback(message);
-        }
-      } catch{
-        socket.emit('error', 'Could not send message');
-        if (typeof callback === 'function') {
-          callback(null);
-        }
+      const message = await prisma.message.create({
+        data: {
+          content,
+          property: { connect: { id: propertyId } },
+          sender: { connect: { id: senderId } },
+          receiver: { connect: { id: receiverId } },
+        },
+        include: {
+          sender: { select: { id: true, name: true } },
+        },
+      });
+
+      io.to(propertyId).emit('newMessage', message);
+      if (typeof callback === 'function') {
+        callback(message);
+      }
+    } catch (err) {
+      console.error('sendMessage error:', err);
+      socket.emit('error', 'Could not send message');
+      if (typeof callback === 'function') {
+        callback(null);
       }
     }
-  );
+  });
+
+  socket.on('disconnecting', () => {
+    for (const room of socket.rooms) {
+      if (room === socket.id) continue;
+      io.to(room).emit('presence', {
+        userId: socket.user.id,
+        status: 'offline',
+      });
+    }
+  });
 
   socket.on('disconnect', (reason) => {
     console.log(`❌ User disconnected: ${socket.user.id} (${reason})`);
   });
 });
-
 
 const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => {
