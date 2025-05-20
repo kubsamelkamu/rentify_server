@@ -31,6 +31,7 @@ io.use((socket, next) => {
 });
 
 io.on('connection', (socket) => {
+  console.log(`✅ User connected: ${socket.user.id}`);
   socket.on('joinRoom', (propertyId) => {
     socket.join(propertyId);
     io.to(propertyId).emit('presence', {
@@ -102,6 +103,7 @@ io.on('connection', (socket) => {
       if (!msg || msg.senderId !== socket.user.id) {
         return callback && callback({ success: false, error: 'Not authorized' });
       }
+
       await prisma.message.update({
         where: { id: messageId },
         data: { deleted: true },
@@ -115,6 +117,32 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on(
+    'editMessage',
+    async ({ propertyId, messageId, newContent }, callback) => {
+      try {
+        const msg = await prisma.message.findUnique({
+          where: { id: messageId },
+          select: { senderId: true },
+        });
+        if (!msg || msg.senderId !== socket.user.id) {
+          return callback && callback({ success: false, error: 'Not authorized' });
+        }
+        const updated = await prisma.message.update({
+          where: { id: messageId },
+          data: { content: newContent, editedAt: new Date() },
+          include: { sender: { select: { id: true, name: true } } },
+        });
+
+        io.to(propertyId).emit('messageEdited', updated);
+        callback && callback({ success: true });
+      } catch (err) {
+        console.error('editMessage error:', err);
+        callback && callback({ success: false, error: 'Server error' });
+      }
+    }
+  );
+  
   socket.on('disconnecting', () => {
     for (const room of socket.rooms) {
       if (room === socket.id) continue;
