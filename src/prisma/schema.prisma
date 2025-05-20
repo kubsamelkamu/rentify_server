@@ -156,9 +156,11 @@ model Message {
   sentAt     DateTime  @default(now())
   read       Boolean   @default(false)
   deleted    Boolean   @default(false)
+  editedAt   DateTime?
 
   @@index([receiverId, read])
   @@index([receiverId, deleted])
+  @@index([editedAt])
 }
 
 
