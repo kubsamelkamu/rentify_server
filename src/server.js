@@ -31,8 +31,6 @@ io.use((socket, next) => {
 });
 
 io.on('connection', (socket) => {
-  console.log(`✅ User connected: ${socket.user.id}`);
-
   socket.on('joinRoom', (propertyId) => {
     socket.join(propertyId);
     io.to(propertyId).emit('presence', {
@@ -92,6 +90,28 @@ io.on('connection', (socket) => {
       if (typeof callback === 'function') {
         callback(null);
       }
+    }
+  });
+
+  socket.on('deleteMessage', async ({ propertyId, messageId }, callback) => {
+    try {
+      const msg = await prisma.message.findUnique({
+        where: { id: messageId },
+        select: { senderId: true },
+      });
+      if (!msg || msg.senderId !== socket.user.id) {
+        return callback && callback({ success: false, error: 'Not authorized' });
+      }
+      await prisma.message.update({
+        where: { id: messageId },
+        data: { deleted: true },
+      });
+
+      io.to(propertyId).emit('messageDeleted', { messageId });
+      callback && callback({ success: true });
+    } catch (err) {
+      console.error('deleteMessage error:', err);
+      callback && callback({ success: false, error: 'Server error' });
     }
   });
 
