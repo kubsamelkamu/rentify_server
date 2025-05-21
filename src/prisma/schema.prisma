@@ -155,9 +155,14 @@ model Message {
   content    String
   sentAt     DateTime  @default(now())
   read       Boolean   @default(false)
+  deleted    Boolean   @default(false)
+  editedAt   DateTime?
 
   @@index([receiverId, read])
+  @@index([receiverId, deleted])
+  @@index([editedAt])
 }
+
 
 model PushSubscription {
   id        String   @id @default(uuid())
