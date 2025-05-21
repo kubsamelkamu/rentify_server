@@ -103,16 +103,13 @@ io.on('connection', (socket) => {
       if (!msg || msg.senderId !== socket.user.id) {
         return callback && callback({ success: false, error: 'Not authorized' });
       }
-
       await prisma.message.update({
         where: { id: messageId },
         data: { deleted: true },
       });
-
       io.to(propertyId).emit('messageDeleted', { messageId });
       callback && callback({ success: true });
-    } catch (err) {
-      console.error('deleteMessage error:', err);
+    } catch{
       callback && callback({ success: false, error: 'Server error' });
     }
   });
@@ -128,6 +125,7 @@ io.on('connection', (socket) => {
         if (!msg || msg.senderId !== socket.user.id) {
           return callback && callback({ success: false, error: 'Not authorized' });
         }
+
         const updated = await prisma.message.update({
           where: { id: messageId },
           data: { content: newContent, editedAt: new Date() },
@@ -136,13 +134,12 @@ io.on('connection', (socket) => {
 
         io.to(propertyId).emit('messageEdited', updated);
         callback && callback({ success: true });
-      } catch (err) {
-        console.error('editMessage error:', err);
+      } catch{
         callback && callback({ success: false, error: 'Server error' });
       }
     }
   );
-  
+
   socket.on('disconnecting', () => {
     for (const room of socket.rooms) {
       if (room === socket.id) continue;
