@@ -31,7 +31,6 @@ io.use((socket, next) => {
 });
 
 io.on('connection', (socket) => {
-  console.log(`✅ User connected: ${socket.user.id}`);
   socket.on('joinRoom', (propertyId) => {
     socket.join(propertyId);
     io.to(propertyId).emit('presence', {
