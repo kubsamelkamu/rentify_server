@@ -37,14 +37,13 @@ export const createProperty = async (req, res) => {
 };
 
 export const getAllProperties = async (req, res) => {
-
   try {
-    const {city,minPrice,maxPrice,minBedrooms,maxBedrooms,propertyType,amenities,page,limit,
+    const {city,minPrice,maxPrice,minBedrooms,maxBedrooms,propertyType,amenities,availableFrom,availableTo,page,limit,
     } = req.query;
 
-    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+    const pageNum  = Math.max(parseInt(page, 10)  || 1, 1);
     const limitNum = Math.max(parseInt(limit, 10) || 9, 1);
-    const skip = (pageNum - 1) * limitNum;
+    const skip     = (pageNum - 1) * limitNum;
 
     const where = {};
 
@@ -65,12 +64,25 @@ export const getAllProperties = async (req, res) => {
       where.propertyType = propertyType;
     }
     if (amenities && typeof amenities === 'string') {
-      const list = amenities
-        .split(',')
-        .map((a) => a.trim())
-        .filter(Boolean);
-      if (list.length) {
-        where.amenities = { hasEvery: list };
+      const list = amenities.split(',').map((a) => a.trim()).filter(Boolean);
+      if (list.length) where.amenities = { hasEvery: list };
+    }
+
+    if (availableFrom && availableTo) {
+      const from = new Date(availableFrom);
+      const to   = new Date(availableTo);
+      if (from < to) {
+        where.bookings = {
+          none: {
+            status: 'CONFIRMED',
+            OR: [
+              {
+                startDate: { lte: to },
+                endDate:   { gte: from },
+              },
+            ],
+          },
+        };
       }
     }
 
@@ -88,10 +100,11 @@ export const getAllProperties = async (req, res) => {
       }),
     ]);
 
-    res.json({ data, total, page: pageNum, limit: limitNum });
-  } catch{
-    res.status(500).json({ error: 'Could not fetch properties' });
-  } 
+    return res.json({ data, total, page: pageNum, limit: limitNum });
+  } catch (error) {
+    console.error('getAllProperties error:', error);
+    return res.status(500).json({ error: 'Could not fetch properties' });
+  }
 };
 
 export const getPropertyById = async (req, res) => {
