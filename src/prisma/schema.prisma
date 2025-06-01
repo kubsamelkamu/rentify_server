@@ -121,8 +121,8 @@ model Payment {
   booking       Booking       @relation(fields: [bookingId], references: [id])
   bookingId     String        @unique
   amount        Decimal       @db.Decimal(10, 2)
-  currency      String
-  transactionId String
+  currency      String       @default("ETB")
+  transactionId String?
   status        PaymentStatus
   paidAt        DateTime?
   createdAt     DateTime      @default(now())

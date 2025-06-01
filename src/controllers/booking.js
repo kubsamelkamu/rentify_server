@@ -264,11 +264,12 @@ export const getUserBookings = async (req, res) => {
         property: {
           select: { id: true, title: true, city: true, rentPerMonth: true },
         },
+        payment: true,        
       },
     });
 
     res.json(bookings);
-  } catch{
+  } catch {
     res.status(500).json({ error: 'Could not fetch your bookings' });
   }
 };
@@ -291,7 +292,10 @@ export const getLandlordBookings = async (req, res) => {
         },
         tenant: {
           select: { id: true, name: true, email: true }
-        }
+        },
+        payment: {
+          select: { status: true } 
+        },
       }
     });
 
