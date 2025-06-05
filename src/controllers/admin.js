@@ -1,7 +1,18 @@
 import { prisma } from '../app.js';
 
 export const getAllUsers = async (req, res) => {
+
   try {
+    const page = parseInt(req.query.page || '1', 10);
+    const limit = parseInt(req.query.limit || '5', 10);
+
+    if (isNaN(page) || isNaN(limit) || page < 1 || limit < 1) {
+      return res.status(400).json({ error: 'page and limit must be positive integers' });
+    }
+
+    const skip = (page - 1) * limit;
+    const totalUsers = await prisma.user.count();
+
     const users = await prisma.user.findMany({
       select: {
         id: true,
@@ -11,22 +22,37 @@ export const getAllUsers = async (req, res) => {
         createdAt: true,
       },
       orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
     });
-    return res.json(users);
-  } catch{
+
+    const totalPages = Math.ceil(totalUsers / limit);
+
+    return res.json({
+      data: users,
+      meta: {
+        totalUsers,
+        page,
+        limit,
+        totalPages,
+      },
+    });
+  } catch {
     return res.status(500).json({ error: 'Could not fetch users' });
   }
 };
 
 export const changeUserRole = async (req, res) => {
+
   const targetUserId = req.params.id;
   const { role } = req.body;
   if (!['TENANT', 'LANDLORD', 'ADMIN'].includes(role)) {
     return res.status(400).json({ error: 'Invalid role value' });
   }
-  if (req.user.id === targetUserId && role !== 'ADMIN') {
+  if (req.user.id === targetUserId && role === 'ADMIN') {
     return res.status(400).json({ error: 'Cannot change your own admin role' });
   }
+
   try {
     const updated = await prisma.user.update({
       where: { id: targetUserId },
@@ -34,13 +60,13 @@ export const changeUserRole = async (req, res) => {
       select: { id: true, name: true, email: true, role: true, updatedAt: true },
     });
     return res.json(updated);
-  } catch (err) {
-    console.error('changeUserRole error:', err);
+  } catch{
     return res.status(500).json({ error: 'Could not update user role' });
   }
 };
 
 export const deleteUser = async (req, res) => {
+
   const targetUserId = req.params.id;
   if (req.user.id === targetUserId) {
     return res.status(400).json({ error: 'Cannot delete your own admin account' });
@@ -54,14 +80,24 @@ export const deleteUser = async (req, res) => {
 
     await prisma.user.delete({ where: { id: targetUserId } });
     return res.json({ success: true });
-  } catch (err) {
-    console.error('deleteUser error:', err);
+  } catch{
     return res.status(500).json({ error: 'Could not delete user' });
   }
 };
 
 export const getAllProperties = async (req, res) => {
+
   try {
+    const page = parseInt(req.query.page || '1', 10);
+    const limit = parseInt(req.query.limit || '5', 10);
+
+    if (isNaN(page) || isNaN(limit) || page < 1 || limit < 1) {
+      return res.status(400).json({ error: 'page and limit must be positive integers' });
+    }
+
+    const skip = (page - 1) * limit;
+    const totalProperties = await prisma.property.count();
+
     const props = await prisma.property.findMany({
       select: {
         id: true,
@@ -72,13 +108,25 @@ export const getAllProperties = async (req, res) => {
         createdAt: true,
       },
       orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
     });
-    return res.json(props);
-  } catch (err) {
-    console.error('getAllProperties error:', err);
+
+    const totalPages = Math.ceil(totalProperties / limit);
+    return res.json({
+      data: props,
+      meta: {
+        totalProperties,
+        page,
+        limit,
+        totalPages,
+      },
+    });
+  } catch{
     return res.status(500).json({ error: 'Could not fetch properties' });
   }
 };
+
 
 export const deletePropertyByAdmin = async (req, res) => {
 
@@ -88,19 +136,29 @@ export const deletePropertyByAdmin = async (req, res) => {
     if (!exists) {
       return res.status(404).json({ error: 'Property not found' });
     }
-
     await prisma.property.delete({ where: { id: propId } });
     return res.json({ success: true });
   } catch{
     return res.status(500).json({ error: 'Could not delete property' });
   }
 };
-
-
 export const getAllBookings = async (req, res) => {
+
   try {
+    const page = parseInt(req.query.page || '1', 10);
+    const limit = parseInt(req.query.limit || '5', 10);
+
+    if (isNaN(page) || isNaN(limit) || page < 1 || limit < 1) {
+      return res.status(400).json({ error: 'page and limit must be positive integers' });
+    }
+
+    const skip = (page - 1) * limit;
+    const totalBookings = await prisma.booking.count();
+
     const bookings = await prisma.booking.findMany({
       orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
       include: {
         tenant: {
           select: { id: true, name: true, email: true },
@@ -113,8 +171,19 @@ export const getAllBookings = async (req, res) => {
         },
       },
     });
-    return res.json(bookings);
-  } catch {
+
+    const totalPages = Math.ceil(totalBookings / limit);
+
+    return res.json({
+      data: bookings,
+      meta: {
+        totalBookings,
+        page,
+        limit,
+        totalPages,
+      },
+    });
+  } catch{
     return res.status(500).json({ error: 'Could not fetch bookings' });
   }
 };
@@ -143,21 +212,43 @@ export const updateBookingStatus = async (req, res) => {
 };
 
 export const getAllReviews = async (req, res) => {
+
   try {
+    const page = parseInt(req.query.page || '1', 10);
+    const limit = parseInt(req.query.limit || '5', 10);
+
+    if (isNaN(page) || isNaN(limit) || page < 1 || limit < 1) {
+      return res.status(400).json({ error: 'page and limit must be positive integers' });
+    }
+    const skip = (page - 1) * limit;
+    const totalReviews = await prisma.review.count();
     const reviews = await prisma.review.findMany({
       orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
       include: {
         tenant: { select: { id: true, name: true } },
         property: { select: { id: true, title: true } },
       },
     });
-    return res.json(reviews);
+
+    const totalPages = Math.ceil(totalReviews / limit);
+    return res.json({
+      data: reviews,
+      meta: {
+        totalReviews,
+        page,
+        limit,
+        totalPages,
+      },
+    });
   } catch{
     return res.status(500).json({ error: 'Could not fetch reviews' });
   }
 };
 
 export const deleteReviewByAdmin = async (req, res) => {
+
   const reviewId = req.params.id;
   try {
     const exists = await prisma.review.findUnique({ where: { id: reviewId } });
@@ -172,6 +263,7 @@ export const deleteReviewByAdmin = async (req, res) => {
 };
 
 export const getSiteMetrics = async (req, res) => {
+
   try {
     const totalUsers = await prisma.user.count();
     const totalProperties = await prisma.property.count();
