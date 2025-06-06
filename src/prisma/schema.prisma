@@ -41,7 +41,7 @@ enum PaymentStatus {
 
 model RoleRequest {
   id            String        @id @default(uuid())
-  user          User          @relation(fields: [userId], references: [id])
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId        String        @unique
   requestedRole Role
   status        RequestStatus
@@ -67,23 +67,23 @@ model User {
 }
 
 model Property {
-  id           String          @id @default(uuid())
-  landlord     User            @relation("LandlordProperties", fields: [landlordId], references: [id])
-  landlordId   String
-  title        String
-  description  String
-  city         String
-  rentPerMonth Decimal         @db.Decimal(10, 2)
-  numBedrooms  Int
-  numBathrooms Int
-  propertyType PropertyType
-  amenities    String[]
-  images       PropertyImage[]
-  bookings     Booking[]
-  reviews      Review[]
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  Message      Message[]
+  id            String          @id @default(uuid())
+  landlord      User            @relation("LandlordProperties", fields: [landlordId], references: [id], onDelete: Cascade)
+  landlordId    String
+  title         String
+  description   String
+  city          String
+  rentPerMonth  Decimal         @db.Decimal(10, 2)
+  numBedrooms   Int
+  numBathrooms  Int
+  propertyType  PropertyType
+  amenities     String[]
+  images        PropertyImage[]
+  bookings      Booking[]
+  reviews       Review[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  Message       Message[]
 
   @@index([city])
   @@index([rentPerMonth])
@@ -91,20 +91,19 @@ model Property {
 
 model PropertyImage {
   id         String   @id @default(uuid())
-  property   Property @relation(fields: [propertyId], references: [id])
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   propertyId String
   fileName   String
   publicId   String?
   url        String
-
   createdAt  DateTime @default(now())
 }
 
 model Booking {
   id         String        @id @default(uuid())
-  tenant     User          @relation("TenantBookings", fields: [tenantId], references: [id])
+  tenant     User          @relation("TenantBookings", fields: [tenantId], references: [id], onDelete: Cascade)
   tenantId   String
-  property   Property      @relation(fields: [propertyId], references: [id])
+  property   Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   propertyId String
   startDate  DateTime
   endDate    DateTime
@@ -118,10 +117,10 @@ model Booking {
 
 model Payment {
   id            String        @id @default(uuid())
-  booking       Booking       @relation(fields: [bookingId], references: [id])
+  booking       Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   bookingId     String        @unique
   amount        Decimal       @db.Decimal(10, 2)
-  currency      String       @default("ETB")
+  currency      String        @default("ETB")
   transactionId String?
   status        PaymentStatus
   paidAt        DateTime?
@@ -131,9 +130,9 @@ model Payment {
 
 model Review {
   id         String   @id @default(uuid())
-  tenant     User     @relation(fields: [tenantId], references: [id])
+  tenant     User     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   tenantId   String
-  property   Property @relation(fields: [propertyId], references: [id])
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   propertyId String
   rating     Int
   title      String
@@ -146,11 +145,11 @@ model Review {
 
 model Message {
   id         String    @id @default(uuid())
-  sender     User      @relation("SentMessages", fields: [senderId], references: [id])
+  sender     User      @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
   senderId   String
-  receiver   User      @relation("RecvMessages", fields: [receiverId], references: [id])
+  receiver   User      @relation("RecvMessages", fields: [receiverId], references: [id], onDelete: Cascade)
   receiverId String
-  property   Property? @relation(fields: [propertyId], references: [id])
+  property   Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
   propertyId String?
   content    String
   sentAt     DateTime  @default(now())
@@ -163,10 +162,9 @@ model Message {
   @@index([editedAt])
 }
 
-
 model PushSubscription {
   id        String   @id @default(uuid())
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
   endpoint  String
   p256dh    String
