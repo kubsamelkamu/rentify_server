@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { prisma } from '../app.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
