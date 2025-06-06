@@ -9,6 +9,7 @@ import paymentRoutes from './routes/payment.js';
 import profileRoutes from './routes/profile.js';
 import propertyRoutes from './routes/property.js';
 import reviewRoutes from './routes/review.js';
+import userRoutes from './routes/user.js';
 
 dotenv.config();
 const app = express();
@@ -24,6 +25,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/users', profileRoutes);
 app.use('/api/properties', propertyRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api', userRoutes);       
 app.get('/api/health', (req, res) => res.json({ status: 'OK' }));
 
 export default app;

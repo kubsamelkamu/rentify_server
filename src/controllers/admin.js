@@ -1,4 +1,7 @@
 import { prisma } from '../app.js';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET;
 
 export const getAllUsers = async (req, res) => {
 
@@ -43,9 +46,9 @@ export const getAllUsers = async (req, res) => {
 };
 
 export const changeUserRole = async (req, res) => {
-
   const targetUserId = req.params.id;
   const { role } = req.body;
+
   if (!['TENANT', 'LANDLORD', 'ADMIN'].includes(role)) {
     return res.status(400).json({ error: 'Invalid role value' });
   }
@@ -54,12 +57,34 @@ export const changeUserRole = async (req, res) => {
   }
 
   try {
-    const updated = await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { id: targetUserId },
       data: { role },
-      select: { id: true, name: true, email: true, role: true, updatedAt: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+      },
     });
-    return res.json(updated);
+
+    const tokenPayload = {
+      userId: updatedUser.id,
+      role: updatedUser.role,
+    };
+
+    const newToken = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '1d' });
+
+    return res.json({
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        profilePhoto: updatedUser.profilePhoto,
+      },
+      token: newToken,
+    });
   } catch{
     return res.status(500).json({ error: 'Could not update user role' });
   }
