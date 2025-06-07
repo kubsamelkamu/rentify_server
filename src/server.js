@@ -2,23 +2,26 @@ import jwt from 'jsonwebtoken';
 import http from 'http';
 import dotenv from 'dotenv';
 import { Server as SocketIOServer } from 'socket.io';
-import app from './app.js';
-import { prisma } from './app.js';
+import app, { prisma } from './app.js'; 
 
 dotenv.config();
 
 const httpServer = http.createServer(app);
 
-export const io = new SocketIOServer(httpServer, {
+const io = new SocketIOServer(httpServer, {
   cors: {
     origin: process.env.FRONTEND_URL,
     methods: ['GET', 'POST'],
   },
 });
 
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// 1️⃣ Authenticate incoming socket connections
 io.use((socket, next) => {
   const token = socket.handshake.auth?.token;
   if (!token) return next(new Error('Authentication error: token required'));
@@ -46,7 +49,6 @@ io.on('connection', async (socket) => {
   } catch (err) {
     console.error('Auto-join landlord rooms failed:', err);
   }
-
 
   socket.on('joinRoom', (propertyId) => {
     const room = `property_${propertyId}`;
@@ -90,7 +92,7 @@ io.on('connection', async (socket) => {
         data: {
           content,
           property: { connect: { id: propertyId } },
-          sender:   { connect: { id: socket.user.id } },
+          sender: { connect: { id: socket.user.id } },
           receiver: { connect: { id: prop.landlordId } },
         },
         include: { sender: { select: { id: true, name: true } } },
@@ -104,7 +106,6 @@ io.on('connection', async (socket) => {
       callback && callback(null);
     }
   });
-
 
   socket.on('deleteMessage', async ({ propertyId, messageId }, callback) => {
     const room = `property_${propertyId}`;
