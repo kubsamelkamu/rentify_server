@@ -26,6 +26,9 @@ app.use('/api/users', profileRoutes);
 app.use('/api/properties', propertyRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api', userRoutes);       
-app.get('/api/health', (req, res) => res.json({ status: 'OK' }));
+
+app.get('/health/status', (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'Server is healthy!' });
+});
 
 export default app;

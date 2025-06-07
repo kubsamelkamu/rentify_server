@@ -1,8 +1,6 @@
 import { prisma } from '../app.js';
-import { io } from '../server.js';
 
 export const requestBooking = async (req, res) => {
-
   const { userId, role } = req.user;
   const { propertyId, startDate, endDate } = req.body;
 
@@ -14,7 +12,7 @@ export const requestBooking = async (req, res) => {
   }
 
   const start = new Date(startDate);
-  const end   = new Date(endDate);
+  const end = new Date(endDate);
   if (start >= end) {
     return res.status(400).json({ error: 'startDate must be before endDate' });
   }
@@ -66,18 +64,18 @@ export const requestBooking = async (req, res) => {
 
     res.status(201).json(booking);
     setImmediate(() => {
-      io.to(`property_${propertyId}`).emit('newBooking', booking);
-      io.to(`user_${userId}`).emit('newBooking', booking);
-      io.to(`landlord_${property.landlordId}`).emit('newBooking', booking);
+      req.io?.to(`property_${propertyId}`).emit('newBooking', booking);
+      req.io?.to(`user_${userId}`).emit('newBooking', booking);
+      req.io?.to(`landlord_${property.landlordId}`).emit('newBooking', booking);
     });
-  } catch{
+  } catch {
     res.status(500).json({ error: 'Could not create booking' });
   }
 };
 
 export const getPropertyBookings = async (req, res) => {
   const { userId, role } = req.user;
-  const { propertyId }   = req.params;
+  const { propertyId } = req.params;
 
   if (role !== 'LANDLORD') {
     return res.status(403).json({ error: 'Only landlords can view bookings for their properties' });
@@ -103,21 +101,21 @@ export const getPropertyBookings = async (req, res) => {
     });
 
     res.json(bookings);
-  } catch{
+  } catch {
     res.status(500).json({ error: 'Could not fetch bookings' });
   }
 };
 
 export const confirmBooking = async (req, res) => {
-  const { userId, role }   = req.user;
-  const { id: bookingId }  = req.params;
+
+  const { userId, role } = req.user;
+  const { id: bookingId } = req.params;
 
   if (role !== 'LANDLORD') {
     return res.status(403).json({ error: 'Only landlords can confirm bookings' });
   }
 
   try {
- 
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
       include: { property: { select: { landlordId: true } } }
@@ -144,18 +142,19 @@ export const confirmBooking = async (req, res) => {
     res.json(updated);
 
     setImmediate(() => {
-      io.to(`property_${updated.propertyId}`).emit('bookingStatusUpdate', updated);
-      io.to(`user_${updated.tenantId}`).emit('bookingStatusUpdate', updated);
-      io.to(`landlord_${updated.property.landlordId}`).emit('bookingStatusUpdate', updated);
+      req.io?.to(`property_${updated.propertyId}`).emit('bookingStatusUpdate', updated);
+      req.io?.to(`user_${updated.tenantId}`).emit('bookingStatusUpdate', updated);
+      req.io?.to(`landlord_${updated.property.landlordId}`).emit('bookingStatusUpdate', updated);
     });
-  } catch{
+  } catch {
     res.status(500).json({ error: 'Could not confirm booking' });
   }
 };
 
 export const rejectBooking = async (req, res) => {
-  const { userId, role }   = req.user;
-  const { id: bookingId }  = req.params;
+
+  const { userId, role } = req.user;
+  const { id: bookingId } = req.params;
 
   if (role !== 'LANDLORD') {
     return res.status(403).json({ error: 'Only landlords can reject bookings' });
@@ -188,11 +187,11 @@ export const rejectBooking = async (req, res) => {
     res.json(updated);
 
     setImmediate(() => {
-      io.to(`property_${updated.propertyId}`).emit('bookingStatusUpdate', updated);
-      io.to(`user_${updated.tenantId}`).emit('bookingStatusUpdate', updated);
-      io.to(`landlord_${updated.property.landlordId}`).emit('bookingStatusUpdate', updated);
+      req.io?.to(`property_${updated.propertyId}`).emit('bookingStatusUpdate', updated);
+      req.io?.to(`user_${updated.tenantId}`).emit('bookingStatusUpdate', updated);
+      req.io?.to(`landlord_${updated.property.landlordId}`).emit('bookingStatusUpdate', updated);
     });
-  } catch{
+  } catch {
     res.status(500).json({ error: 'Could not reject booking' });
   }
 };
@@ -233,19 +232,13 @@ export const cancelBooking = async (req, res) => {
     });
 
     res.json(updated);
-    setImmediate(() => {
-      io.to(`property_${updated.propertyId}`)
-        .emit('bookingStatusUpdate', updated);
-    });
 
     setImmediate(() => {
-      io.to(`user_${updated.tenantId}`).emit('bookingStatusUpdate', updated);
+      req.io?.to(`property_${updated.propertyId}`).emit('bookingStatusUpdate', updated);
+      req.io?.to(`user_${updated.tenantId}`).emit('bookingStatusUpdate', updated);
+      req.io?.to(`landlord_${updated.property.landlordId}`).emit('bookingStatusUpdate', updated);
     });
-    setImmediate(() => {
-      io.to(`landlord_${updated.property.landlordId}`).emit('bookingStatusUpdate', updated);
-    });
-
-  } catch{
+  } catch {
     return res.status(500).json({ error: 'Could not cancel booking' });
   }
 };
@@ -300,7 +293,7 @@ export const getLandlordBookings = async (req, res) => {
     });
 
     res.json(bookings);
-  } catch{
+  } catch {
     res.status(500).json({ error: 'Could not fetch landlord bookings' });
   }
 };

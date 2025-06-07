@@ -1,12 +1,10 @@
 import { prisma } from '../app.js';
 import axios from 'axios';
-import { io } from '../server.js';   
 
 const CHAPA_SECRET   = process.env.CHAPA_SECRET_KEY;
 const CHAPA_BASE_URL = 'https://api.chapa.co/v1';
 
 export const initiatePayment = async (req, res) => {
-
   const { bookingId } = req.body;
 
   const booking = await prisma.booking.findUnique({
@@ -71,7 +69,8 @@ export const initiatePayment = async (req, res) => {
   }
 };
 
-export const handleWebhook = async (req, res) => {
+// --- Webhook handler accepts io as an argument! ---
+export const handleWebhook = (io) => async (req, res) => {
   const { data } = req.body;
   const txRef    = data.tx_ref;   
   const status   = data.status;  
