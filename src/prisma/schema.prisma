@@ -49,21 +49,24 @@ model RoleRequest {
 }
 
 model User {
-  id            String             @id @default(uuid())
-  role          Role
-  email         String             @unique
-  password      String
-  name          String
-  profilePhoto  String?
-  bookings      Booking[]          @relation("TenantBookings")
-  properties    Property[]         @relation("LandlordProperties")
-  reviews       Review[]
-  sentMessages  Message[]          @relation("SentMessages")
-  recvMessages  Message[]          @relation("RecvMessages")
-  subscriptions PushSubscription[]
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-  RoleRequest   RoleRequest?
+  id                          String   @id @default(uuid())
+  role                        Role
+  email                       String   @unique
+  password                    String
+  name                        String
+  profilePhoto                String?
+  bookings                    Booking[]          @relation("TenantBookings")
+  properties                  Property[]         @relation("LandlordProperties")
+  reviews                     Review[]
+  sentMessages                Message[]          @relation("SentMessages")
+  recvMessages                Message[]          @relation("RecvMessages")
+  subscriptions               PushSubscription[]
+  createdAt                   DateTime           @default(now())
+  updatedAt                   DateTime           @updatedAt
+  RoleRequest                 RoleRequest?
+  isVerified                  Boolean            @default(false)
+  verificationToken           String?
+  verificationTokenExpiresAt  DateTime?
 }
 
 model Property {
