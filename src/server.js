@@ -170,6 +170,11 @@ io.on('connection', async (socket) => {
   });
 });
 
+console.log(process.env.RESEND_API_KEY);
+console.log(process.env.EMAIL_FROM);
+console.log(process.env.NEXT_PUBLIC_APP_URL);
+
+
 const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => {
   console.log(`🚀 Server listening on port ${PORT}`);
