@@ -67,6 +67,8 @@ model User {
   isVerified                  Boolean            @default(false)
   verificationToken           String?
   verificationTokenExpiresAt  DateTime?
+  resetToken                  String?
+  resetTokenExpiresAt         DateTime?
 }
 
 model Property {
