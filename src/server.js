@@ -170,9 +170,10 @@ io.on('connection', async (socket) => {
   });
 });
 
-console.log(process.env.RESEND_API_KEY);
-console.log(process.env.EMAIL_FROM);
-console.log(process.env.NEXT_PUBLIC_APP_URL);
+console.log('KEY:', `[${process.env.CLOUDINARY_API_KEY}]`);
+console.log('SECRET:', `[${process.env.CLOUDINARY_API_SECRET}]`);
+console.log('CLOUD_NAME:', `[${process.env.CLOUDINARY_CLOUD_NAME}]`);
+
 
 
 const PORT = process.env.PORT || 5000;
