@@ -1,13 +1,14 @@
 import jwt from 'jsonwebtoken';
 
 function auth(req, res, next) {
+  
+  if (req.path === '/api/payments/webhook') {
+    return next();
+  }
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'No token provided' });
 
   const [, token] = authHeader.split(' ');
-    if (req.path === '/api/payments/webhook') {
-    return next();
-  }
 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
