@@ -6,7 +6,6 @@ const router = Router();
 
 router.post('/initiate', auth, initiatePayment);
 router.post('/webhook', (req, res) => {
-  console.log('✅ Webhook hit received! Body:', req.body);
   res.json({ message: 'Webhook received!' });
 });
 
