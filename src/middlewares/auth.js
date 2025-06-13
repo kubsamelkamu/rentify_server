@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 
 function auth(req, res, next) {
   
-  if (req.path === '/api/payments/webhook') {
+  if (req.originalUrl === '/api/payments/webhook') {
     return next();
   }
   const authHeader = req.headers.authorization;
