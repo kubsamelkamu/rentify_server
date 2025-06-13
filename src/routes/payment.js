@@ -5,8 +5,6 @@ import { initiatePayment, handleWebhook } from '../controllers/payment.js';
 const router = Router();
 
 router.post('/initiate', auth, initiatePayment);
-router.post('/webhook', (req, res) => {
-  res.json({ message: 'Webhook received!' });
-});
+router.post('/webhook', handleWebhook);
 
 export default router;
