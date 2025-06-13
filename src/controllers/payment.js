@@ -74,13 +74,13 @@ export const handleWebhook = (io) => async (req, res) => {
   const { data } = req.body;
   const txRef  = data.tx_ref;
   const status = data.status;
-  const mapped = status === 'success' ? 'SUCCESS' : 'FAILED';
+  const mapped = status === 'success' ? 'PENDING' : 'FAILED';
 
   const payment = await prisma.payment.update({
     where: { id: txRef },
     data: {
       status: mapped,
-      paidAt: mapped === 'SUCCESS' ? new Date() : undefined,
+      paidAt: mapped === 'PENDING' ? new Date() : undefined,
     },
     include: {
       booking: {
@@ -112,7 +112,7 @@ export const handleWebhook = (io) => async (req, res) => {
   const bookingLink = `${process.env.FRONTEND_URL}/bookings/${payment.booking.id}`;
   const amount      = payment.amount.toFixed(2);
 
-  if (mapped === 'SUCCESS' | mapped === 'PENDING') {
+  if (mapped === 'PENDING') {
     sendPaymentSuccess({
       userName:      tenant.name,
       toEmail:       tenant.email,
