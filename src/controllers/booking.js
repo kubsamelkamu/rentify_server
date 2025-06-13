@@ -1,6 +1,8 @@
 import { prisma } from '../app.js';
+import { sendBookingConfirmation , sendBookingRejection ,sendBookingCancellation} from '../utils/emailService.js';
 
 export const requestBooking = async (req, res) => {
+
   const { userId, role } = req.user;
   const { propertyId, startDate, endDate } = req.body;
 
@@ -74,6 +76,7 @@ export const requestBooking = async (req, res) => {
 };
 
 export const getPropertyBookings = async (req, res) => {
+
   const { userId, role } = req.user;
   const { propertyId } = req.params;
 
@@ -136,9 +139,9 @@ export const confirmBooking = async (req, res) => {
       include: {
         property: { select: { id: true, title: true, city: true, rentPerMonth: true, landlordId: true } },
         tenant:   { select: { id: true, name: true, email: true } },
+        payment:  { select: { amount: true, currency: true } }
       },
     });
-
     res.json(updated);
 
     setImmediate(() => {
@@ -146,13 +149,32 @@ export const confirmBooking = async (req, res) => {
       req.io?.to(`user_${updated.tenantId}`).emit('bookingStatusUpdate', updated);
       req.io?.to(`landlord_${updated.property.landlordId}`).emit('bookingStatusUpdate', updated);
     });
-  } catch {
-    res.status(500).json({ error: 'Could not confirm booking' });
+
+    try {
+      await sendBookingConfirmation({
+        userName: updated.tenant.name,
+        toEmail: updated.tenant.email,
+        propertyTitle: updated.property.title,
+        propertyCity: updated.property.city,
+        startDate: updated.startDate.toISOString().split('T')[0],
+        endDate: updated.endDate.toISOString().split('T')[0],
+        rentPerMonth: updated.property.rentPerMonth, 
+        bookingLink: `${process.env.FRONTEND_URL}/bookings`,
+      });
+    } catch (emailError) {
+      console.error('Booking confirmation email error:', emailError);
+    }
+  } catch (err) {
+    console.error('confirmBooking error:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Could not confirm booking' });
+    }
   }
 };
 
-export const rejectBooking = async (req, res) => {
 
+export const rejectBooking = async (req, res) => {
+  
   const { userId, role } = req.user;
   const { id: bookingId } = req.params;
 
@@ -165,9 +187,7 @@ export const rejectBooking = async (req, res) => {
       where: { id: bookingId },
       include: { property: { select: { landlordId: true } } }
     });
-    if (!booking) {
-      return res.status(404).json({ error: 'Booking not found' });
-    }
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
     if (booking.property.landlordId !== userId) {
       return res.status(403).json({ error: 'Not authorized to reject this booking' });
     }
@@ -179,24 +199,40 @@ export const rejectBooking = async (req, res) => {
       where: { id: bookingId },
       data: { status: 'REJECTED' },
       include: {
-        property: { select: { id: true, title: true, city: true, rentPerMonth: true, landlordId: true } },
+        property: { select: { id: true, title: true, city: true, landlordId: true } },
         tenant:   { select: { id: true, name: true, email: true } },
       },
     });
 
     res.json(updated);
-
     setImmediate(() => {
       req.io?.to(`property_${updated.propertyId}`).emit('bookingStatusUpdate', updated);
       req.io?.to(`user_${updated.tenantId}`).emit('bookingStatusUpdate', updated);
       req.io?.to(`landlord_${updated.property.landlordId}`).emit('bookingStatusUpdate', updated);
     });
-  } catch {
-    res.status(500).json({ error: 'Could not reject booking' });
+
+    sendBookingRejection({
+      userName:     updated.tenant.name,
+      toEmail:      updated.tenant.email,
+      propertyTitle: updated.property.title,
+      startDate:    updated.startDate.toISOString().split('T')[0],
+      endDate:      updated.endDate.toISOString().split('T')[0],
+      listingsLink: `${process.env.FRONTEND_URL}/properties`
+    }).catch(err => {
+      console.error('Booking rejection email error:', err);
+    });
+
+  } catch (err) {
+    console.error('rejectBooking error:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Could not reject booking' });
+    }
   }
 };
 
+
 export const cancelBooking = async (req, res) => {
+
   const { userId, role } = req.user;
   const { id: bookingId } = req.params;
 
@@ -238,6 +274,17 @@ export const cancelBooking = async (req, res) => {
       req.io?.to(`user_${updated.tenantId}`).emit('bookingStatusUpdate', updated);
       req.io?.to(`landlord_${updated.property.landlordId}`).emit('bookingStatusUpdate', updated);
     });
+      sendBookingCancellation({
+      userName:     updated.tenant.name,
+      toEmail:      updated.tenant.email,
+      propertyTitle: updated.property.title,
+      propertyCity:  updated.property.city,
+      startDate:    updated.startDate.toISOString().split('T')[0],
+      endDate:      updated.endDate.toISOString().split('T')[0],
+      supportLink:  `${process.env.FRONTEND_URL}/help`
+    }).catch(err => {
+    console.error('Booking cancellation email error:', err);
+   });
   } catch {
     return res.status(500).json({ error: 'Could not cancel booking' });
   }
@@ -260,7 +307,6 @@ export const getUserBookings = async (req, res) => {
         payment: true,        
       },
     });
-
     res.json(bookings);
   } catch {
     res.status(500).json({ error: 'Could not fetch your bookings' });
@@ -268,6 +314,7 @@ export const getUserBookings = async (req, res) => {
 };
 
 export const getLandlordBookings = async (req, res) => {
+
   const { userId, role } = req.user;
   if (role !== 'LANDLORD') {
     return res.status(403).json({ error: 'Only landlords can view these bookings' });

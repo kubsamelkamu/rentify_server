@@ -1,4 +1,5 @@
 import { prisma } from '../app.js';
+import { sendLandlordPromotion } from '../utils/emailService.js';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -46,6 +47,7 @@ export const getAllUsers = async (req, res) => {
 };
 
 export const changeUserRole = async (req, res) => {
+  
   const targetUserId = req.params.id;
   const { role } = req.body;
 
@@ -65,8 +67,21 @@ export const changeUserRole = async (req, res) => {
         name: true,
         email: true,
         role: true,
+        profilePhoto: true,
       },
     });
+
+    if (role === 'LANDLORD') {
+      try {
+        await sendLandlordPromotion({
+          userName: updatedUser.name || 'User',
+          toEmail: updatedUser.email,
+        });
+        console.log('Landlord promotion email sent successfully');
+      } catch (emailError) {
+        console.error('Failed to send landlord promotion email:', emailError);
+      }
+    }
 
     const tokenPayload = {
       userId: updatedUser.id,
@@ -85,10 +100,13 @@ export const changeUserRole = async (req, res) => {
       },
       token: newToken,
     });
-  } catch{
+
+  } catch (err) {
+    console.error(err);
     return res.status(500).json({ error: 'Could not update user role' });
   }
 };
+
 
 export const deleteUser = async (req, res) => {
 

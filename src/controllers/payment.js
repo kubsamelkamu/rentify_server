@@ -1,10 +1,12 @@
 import { prisma } from '../app.js';
 import axios from 'axios';
+import { sendPaymentSuccess, sendPaymentFailure } from '../utils/emailService.js';
 
 const CHAPA_SECRET   = process.env.CHAPA_SECRET_KEY;
 const CHAPA_BASE_URL = 'https://api.chapa.co/v1';
 
 export const initiatePayment = async (req, res) => {
+
   const { bookingId } = req.body;
 
   const booking = await prisma.booking.findUnique({
@@ -49,9 +51,7 @@ export const initiatePayment = async (req, res) => {
         callback_url: `${process.env.BACKEND_URL}/api/payments/webhook`,
         return_url:   `${process.env.FRONTEND_URL}/payments/success?bookingId=${bookingId}`,
       },
-      {
-        headers: { Authorization: `Bearer ${CHAPA_SECRET}` },
-      }
+      { headers: { Authorization: `Bearer ${CHAPA_SECRET}` } }
     );
 
     await prisma.payment.update({
@@ -69,12 +69,12 @@ export const initiatePayment = async (req, res) => {
   }
 };
 
-// --- Webhook handler accepts io as an argument! ---
 export const handleWebhook = (io) => async (req, res) => {
+
   const { data } = req.body;
-  const txRef    = data.tx_ref;   
-  const status   = data.status;  
-  const mapped   = status === 'success' ? 'SUCCESS' : 'FAILED';
+  const txRef  = data.tx_ref;
+  const status = data.status;
+  const mapped = status === 'success' ? 'SUCCESS' : 'FAILED';
 
   const payment = await prisma.payment.update({
     where: { id: txRef },
@@ -87,7 +87,7 @@ export const handleWebhook = (io) => async (req, res) => {
         select: {
           id:        true,
           tenantId:  true,
-          property: { select: { landlordId: true } },
+          property: { select: { landlordId: true, title: true, city: true } },
         },
       },
     },
@@ -100,11 +100,36 @@ export const handleWebhook = (io) => async (req, res) => {
     bookingId:     payment.booking.id,
     paymentStatus: payment.status,
   });
-
   io.to(landlordRoom).emit('paymentStatusUpdated', {
     bookingId:     payment.booking.id,
     paymentStatus: payment.status,
   });
 
-  res.json({ status: 'ok' });
+  const tenant = await prisma.user.findUnique({
+    where: { id: payment.booking.tenantId },
+    select: { name: true, email: true }
+  });
+  const bookingLink = `${process.env.FRONTEND_URL}/bookings/${payment.booking.id}`;
+  const amount      = payment.amount.toFixed(2);
+
+  if (mapped === 'SUCCESS') {
+    sendPaymentSuccess({
+      userName:      tenant.name,
+      toEmail:       tenant.email,
+      propertyTitle: payment.booking.property.title,
+      amount,
+      paidAt:        payment.paidAt.toISOString().split('T')[0],
+      bookingLink
+    }).catch(err => console.error('Payment success email error:', err));
+  } else {
+    sendPaymentFailure({
+      userName:      tenant.name,
+      toEmail:       tenant.email,
+      propertyTitle: payment.booking.property.title,
+      amount,
+      supportLink:   `${process.env.FRONTEND_URL}/help`
+    }).catch(err => console.error('Payment failure email error:', err));
+  }
+
+  return res.json({ status: 'ok' });
 };
