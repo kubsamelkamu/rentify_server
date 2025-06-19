@@ -1,12 +1,16 @@
-const BREVO_API_KEY = process.env.BREVO_API_KEY;
-const SENDER_NAME   = process.env.EMAIL_SENDER_NAME    || 'Rentify';
-const SENDER_EMAIL  = process.env.EMAIL_SENDER_ADDRESS || 'kubsamlkm@gmail.com';
+export const BREVO_API_KEY                = process.env.BREVO_API_KEY;
+export const SENDER_NAME                  = process.env.EMAIL_SENDER_NAME    || 'Rentify';
+export const SENDER_EMAIL                 = process.env.EMAIL_SENDER_ADDRESS || 'srentify@gmail.com';
+export const CONTACT_RECEIVER_EMAIL       = process.env.CONTACT_RECEIVER_EMAIL || 'srentify@gmail.com';
+export const BREVO_LIST_ID                = process.env.BREVO_LIST_ID;
+export const BREVO_CONTACT_TEMPLATE_ID    = Number(process.env.BREVO_CONTACT_TEMPLATE_ID);
+export const BREVO_NEWSLETTER_TEMPLATE_ID = Number(process.env.BREVO_NEWSLETTER_TEMPLATE_ID);
 
 if (!BREVO_API_KEY) {
   throw new Error('Missing BREVO_API_KEY in env');
 }
 
-async function sendEmail(url, payload) {
+export async function sendEmail(url, payload) {
   const res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -18,7 +22,6 @@ async function sendEmail(url, payload) {
   });
 
   const text = await res.text();
-
   if (!res.ok) {
     console.error('Brevo sendEmail error:', res.status, text);
     throw new Error(`Brevo sendEmail failed: ${res.status}`);
@@ -26,14 +29,14 @@ async function sendEmail(url, payload) {
   return JSON.parse(text);
 }
 
-function sanitizeName(userName) {
+export function sanitizeName(userName) {
   let name = typeof userName === 'string' && userName.trim() ? userName : 'User';
   name = name.replace(/[^a-zA-Z0-9\s'-]/g, '').trim();
   return name || 'User';
 }
 
+// Verification & Password Emails
 export async function sendVerificationEmail(userName, toEmail, verificationUrl) {
-
   const safeName = sanitizeName(userName);
   const firstName = safeName.split(' ')[0];
   const year = new Date().getFullYear();
@@ -47,7 +50,6 @@ export async function sendVerificationEmail(userName, toEmail, verificationUrl) 
 }
 
 export async function sendResetPasswordEmail(userName, toEmail, resetUrl) {
-
   const safeName = sanitizeName(userName);
   const firstName = safeName.split(' ')[0];
   const year = new Date().getFullYear();
@@ -60,8 +62,8 @@ export async function sendResetPasswordEmail(userName, toEmail, resetUrl) {
   return sendEmail('https://api.brevo.com/v3/smtp/email', payload);
 }
 
+// Promotion & Contact Emails
 export async function sendLandlordPromotion(userName, toEmail) {
-
   const safeName = sanitizeName(userName);
   const firstName = safeName.split(' ')[0];
   const year = new Date().getFullYear();
@@ -81,8 +83,47 @@ export async function sendLandlordPromotion(userName, toEmail) {
   return sendEmail('https://api.brevo.com/v3/smtp/email', payload);
 }
 
-export async function sendBookingConfirmation({ userName, toEmail, propertyTitle, propertyCity, startDate, endDate, rentPerMonth, bookingLink }) {
 
+
+export async function sendBookingRequest(opts) {
+  const {
+    landlordName,
+    toEmail,
+    propertyTitle,
+    propertyCity,
+    startDate,
+    endDate,
+    tenantName,
+    tenantEmail,
+    bookingLink
+  } = opts;
+
+  const safeName  = sanitizeName(landlordName);
+  const firstName = safeName.split(' ')[0];
+  const year      = new Date().getFullYear();
+
+  const payload = {
+    sender: { name: SENDER_NAME, email: SENDER_EMAIL },
+    to:     [{ email: toEmail, name: safeName }],
+    templateId: Number(process.env.BREVO_BOOKING_REQUEST_TEMPLATE_ID),
+    params: {
+      firstName,
+      propertyTitle,
+      propertyCity,
+      startDate,
+      endDate,
+      tenantName,
+      tenantEmail,
+      bookingLink,
+      year
+    }
+  };
+  return sendEmail('https://api.brevo.com/v3/smtp/email', payload);
+}
+
+export async function sendBookingConfirmation(opts) {
+
+  const { userName, toEmail, propertyTitle, propertyCity, startDate, endDate, rentPerMonth, bookingLink } = opts;
   const safeName = sanitizeName(userName);
   const firstName = safeName.split(' ')[0];
   const year = new Date().getFullYear();
@@ -101,11 +142,11 @@ export async function sendBookingConfirmation({ userName, toEmail, propertyTitle
     templateId: Number(process.env.BREVO_BOOKING_CONFIRMATION_TEMPLATE_ID),
     params: { firstName, propertyTitle, propertyCity, startDate, endDate, amount: amountDisplay, bookingLink, year }
   };
-  console.log('Booking confirmation payload:', JSON.stringify(payload, null, 2));
   return sendEmail('https://api.brevo.com/v3/smtp/email', payload);
 }
 
-export async function sendBookingRejection({ userName, toEmail, propertyTitle, startDate, endDate, listingsLink }) {
+export async function sendBookingRejection(opts) {
+  const { userName, toEmail, propertyTitle, startDate, endDate, listingsLink } = opts;
   const safeName = sanitizeName(userName);
   const firstName = safeName.split(' ')[0];
   const year = new Date().getFullYear();
@@ -113,18 +154,15 @@ export async function sendBookingRejection({ userName, toEmail, propertyTitle, s
   const payload = {
     sender: { name: SENDER_NAME, email: SENDER_EMAIL },
     to: [{ email: toEmail, name: safeName }],
-    templateId: Number(process.env.BREVO_BOOKING_REJECT_TEMPLATE_ID),
+    templateId:Number(process.env.BREVO_BOOKING_REJECT_TEMPLATE_ID),
     params: { firstName, propertyTitle, startDate, endDate, listingsLink, year }
   };
-  console.log('Booking rejection payload:', JSON.stringify(payload, null, 2));
   return sendEmail('https://api.brevo.com/v3/smtp/email', payload);
 }
 
-export async function sendBookingCancellation({
-  userName, toEmail,
-  propertyTitle, propertyCity,
-  startDate, endDate, supportLink
-}) {
+export async function sendBookingCancellation(opts) {
+  
+  const { userName, toEmail, propertyTitle, propertyCity, startDate, endDate, supportLink } = opts;
   const safeName = sanitizeName(userName);
   const firstName = safeName.split(' ')[0];
   const year = new Date().getFullYear();
@@ -132,23 +170,15 @@ export async function sendBookingCancellation({
   const payload = {
     sender: { name: SENDER_NAME, email: SENDER_EMAIL },
     to: [{ email: toEmail, name: safeName }],
-    templateId: Number(process.env.BREVO_BOOKING_CANCELLATION_TEMPLATE_ID),
+    templateId:Number(process.env.BREVO_BOOKING_CANCELLATION_TEMPLATE_ID),
     params: { firstName, propertyTitle, propertyCity, startDate, endDate, supportLink, year }
   };
-
-  console.log('Booking cancellation payload:', JSON.stringify(payload, null, 2));
   return sendEmail('https://api.brevo.com/v3/smtp/email', payload);
 }
 
-// Send Payment Success Email
-export async function sendPaymentSuccess({
-  userName,
-  toEmail,
-  propertyTitle,
-  amount,
-  paidAt,
-  bookingLink
-}) {
+// Payment Emails
+export async function sendPaymentSuccess(opts) {
+  const { userName, toEmail, propertyTitle, amount, paidAt, bookingLink } = opts;
   const safeName = sanitizeName(userName);
   const firstName = safeName.split(' ')[0];
   const year = new Date().getFullYear();
@@ -159,19 +189,11 @@ export async function sendPaymentSuccess({
     templateId: Number(process.env.BREVO_PAYMENT_SUCCESS_TEMPLATE_ID),
     params: { firstName, propertyTitle, amount, paidAt, bookingLink, year }
   };
-
-  console.log('Payment success payload:', JSON.stringify(payload, null, 2));
   return sendEmail('https://api.brevo.com/v3/smtp/email', payload);
 }
 
-// Send Payment Failure Email
-export async function sendPaymentFailure({
-  userName,
-  toEmail,
-  propertyTitle,
-  amount,
-  supportLink
-}) {
+export async function sendPaymentFailure(opts) {
+  const { userName, toEmail, propertyTitle, amount, supportLink } = opts;
   const safeName = sanitizeName(userName);
   const firstName = safeName.split(' ')[0];
   const year = new Date().getFullYear();
@@ -182,9 +204,62 @@ export async function sendPaymentFailure({
     templateId: Number(process.env.BREVO_PAYMENT_FAILURE_TEMPLATE_ID),
     params: { firstName, propertyTitle, amount, supportLink, year }
   };
-
-  console.log('Payment failure payload:', JSON.stringify(payload, null, 2));
   return sendEmail('https://api.brevo.com/v3/smtp/email', payload);
 }
 
+export async function sendContactEmail(opts) {
+  const { userName, userEmail, subject, message } = opts;
+  const safeName = sanitizeName(userName);
+  const firstName = safeName.split(' ')[0];
+  const year = new Date().getFullYear();
 
+  const payload = {
+    sender: { name: SENDER_NAME, email: SENDER_EMAIL },
+    to: [{ email: CONTACT_RECEIVER_EMAIL, name: 'Rentify Support' }],
+    templateId: BREVO_CONTACT_TEMPLATE_ID,
+    params: { firstName, userEmail, subject: subject || '(No subject)', message: message.replace(/\n/g, '<br/>'), year }
+  };
+  return sendEmail('https://api.brevo.com/v3/smtp/email', payload);
+}
+
+export async function addToNewsletterList(email) {
+  const url = 'https://api.brevo.com/v3/contacts';
+  const payload = { email };
+  if (BREVO_LIST_ID) payload.listIds = [Number(BREVO_LIST_ID)];
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      'api-key': BREVO_API_KEY,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const text = await res.text();
+  if (!res.ok) {
+    try {
+      const err = JSON.parse(text);
+      if (err.code === 'duplicate_parameter' || err.code === 'duplicate_parameters') {
+        // Continue to sending welcome email
+      } else {
+        throw err;
+      }
+    } catch {
+      console.error('Brevo Contacts API error:', res.status, text);
+      throw new Error(`Failed to add contact: ${res.status}`);
+    }
+  }
+
+  const firstName = sanitizeName(email.split('@')[0]).split(' ')[0];
+  const year      = new Date().getFullYear();
+
+  const emailPayload = {
+    sender: { name: SENDER_NAME, email: SENDER_EMAIL },
+    to: [{ email, name: firstName }],
+    templateId: BREVO_NEWSLETTER_TEMPLATE_ID,
+    params: { firstName, year },
+  };
+  return sendEmail('https://api.brevo.com/v3/smtp/email', emailPayload);
+}

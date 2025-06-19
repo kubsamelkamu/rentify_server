@@ -2,17 +2,18 @@ import { prisma } from '../app.js';
 import cloudinary from '../config/cloudinary.js';
 
 export const createProperty = async (req, res) => {
+
   const { role, userId: landlordId } = req.user;
   if (role !== 'LANDLORD') {
     return res.status(403).json({ error: 'Only landlords can create properties' });
   }
 
-  const {title,description,city,rentPerMonth,numBedrooms,numBathrooms,propertyType,amenities,
+  const {
+    title, description, city, rentPerMonth, numBedrooms, numBathrooms, propertyType, amenities,
   } = req.body;
 
-  if (!title ||!description ||!city ||rentPerMonth == null ||numBedrooms == null ||
-    numBathrooms == null ||!propertyType ||!Array.isArray(amenities)
-  ) {
+  if (!title || !description || !city || rentPerMonth == null ||
+      numBedrooms == null || numBathrooms == null || !propertyType || !Array.isArray(amenities)) {
     return res.status(400).json({ error: 'All fields are required and must be valid' });
   }
 
@@ -30,18 +31,26 @@ export const createProperty = async (req, res) => {
         landlord: { connect: { id: landlordId } },
       },
     });
+
+    const io = req.app.get('io');
+    io.emit('admin:newProperty', newProperty);
+
     res.status(201).json(newProperty);
-  } catch{
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Could not create property' });
   }
 };
 
 export const getAllProperties = async (req, res) => {
+
   try {
-    const {city,minPrice,maxPrice,minBedrooms,maxBedrooms,propertyType,amenities,availableFrom,availableTo,page,limit,
+    const {
+      city, minPrice, maxPrice, minBedrooms, maxBedrooms, propertyType, amenities,
+      availableFrom, availableTo, page, limit,
     } = req.query;
 
-    const pageNum  = Math.max(parseInt(page, 10)  || 1, 1);
+    const pageNum  = Math.max(parseInt(page, 10) || 1, 1);
     const limitNum = Math.max(parseInt(limit, 10) || 9, 1);
     const skip     = (pageNum - 1) * limitNum;
 
@@ -67,7 +76,6 @@ export const getAllProperties = async (req, res) => {
       const list = amenities.split(',').map((a) => a.trim()).filter(Boolean);
       if (list.length) where.amenities = { hasEvery: list };
     }
-
     if (availableFrom && availableTo) {
       const from = new Date(availableFrom);
       const to   = new Date(availableTo);
@@ -76,10 +84,7 @@ export const getAllProperties = async (req, res) => {
           none: {
             status: 'CONFIRMED',
             OR: [
-              {
-                startDate: { lte: to },
-                endDate:   { gte: from },
-              },
+              { startDate: { lte: to }, endDate: { gte: from } },
             ],
           },
         };
@@ -100,14 +105,15 @@ export const getAllProperties = async (req, res) => {
       }),
     ]);
 
-    return res.json({ data, total, page: pageNum, limit: limitNum });
+    res.json({ data, total, page: pageNum, limit: limitNum });
   } catch (error) {
     console.error('getAllProperties error:', error);
-    return res.status(500).json({ error: 'Could not fetch properties' });
+    res.status(500).json({ error: 'Could not fetch properties' });
   }
 };
 
 export const getPropertyById = async (req, res) => {
+  
   const { id } = req.params;
   try {
     const property = await prisma.property.findUnique({
@@ -116,9 +122,7 @@ export const getPropertyById = async (req, res) => {
         landlord: { select: { id: true, name: true, email: true } },
         images: true,
         Message: {
-          include: {
-            sender: { select: { id: true, name: true } },
-          },
+          include: { sender: { select: { id: true, name: true } } },
           orderBy: { sentAt: 'asc' },
         },
       },
@@ -135,6 +139,7 @@ export const getPropertyById = async (req, res) => {
   }
 };
 
+// Update property
 export const updateProperty = async (req, res) => {
   const { id } = req.params;
   const { userId } = req.user;
@@ -148,7 +153,8 @@ export const updateProperty = async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to update this property' });
     }
 
-    const {title,description,city,rentPerMonth,numBedrooms,numBathrooms,propertyType,amenities,
+    const {
+      title, description, city, rentPerMonth, numBedrooms, numBathrooms, propertyType, amenities,
     } = req.body;
 
     const updated = await prisma.property.update({
@@ -165,14 +171,18 @@ export const updateProperty = async (req, res) => {
       },
     });
 
+    const io = req.app.get('io');
+    io.emit('admin:updatedProperty', updated);
+
     res.json(updated);
-  } catch {
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Could not update property' });
   }
 };
 
+// Delete property
 export const deleteProperty = async (req, res) => {
-
   const { id } = req.params;
   const { role, userId } = req.user;
 
@@ -190,14 +200,18 @@ export const deleteProperty = async (req, res) => {
     await prisma.propertyImage.deleteMany({ where: { propertyId: id } });
     await prisma.property.delete({ where: { id } });
 
+    const io = req.app.get('io');
+    io.emit('admin:deletedProperty', id);
+
     res.json({ message: 'Property and its images deleted successfully' });
-  } catch{
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Could not delete property' });
   }
 };
 
 export const uploadPropertyImages = async (req, res) => {
-
+  
   const { id } = req.params;
   const { role, userId } = req.user;
 
@@ -243,7 +257,8 @@ export const uploadPropertyImages = async (req, res) => {
     );
 
     res.json(savedImages);
-  } catch {
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Could not upload images' });
   }
 };

@@ -34,6 +34,15 @@ export const register = async (req, res) => {
       data: { name, email, password: hashedPassword, role: 'TENANT' },
     });
 
+    const io = req.app.get('io');  
+    io.emit('admin:newUser', {
+      id:        user.id,
+      name:      user.name,
+      email:     user.email,
+      role:      user.role,
+      createdAt: user.createdAt,
+    });
+
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '1d' });
     const verificationUrl = `${process.env.FRONTEND_URL}/auth/verify?token=${token}`;
 
@@ -48,8 +57,8 @@ export const register = async (req, res) => {
   }
 };
 
-export const login = async (req, res) => {
 
+export const login = async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required' });
@@ -88,7 +97,7 @@ export const login = async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
       },
     });
   } catch (error) {
@@ -97,7 +106,6 @@ export const login = async (req, res) => {
 };
 
 export const verifyEmail = async (req, res) => {
-
   const { token } = req.query;
   if (!token) {
     return res.status(400).json({ error: 'Verification token is required' });
@@ -116,7 +124,6 @@ export const verifyEmail = async (req, res) => {
 };
 
 export const forgotPassword = async (req, res) => {
-
   const { email } = req.body;
   if (!email) {
     return res.status(400).json({ error: 'Email is required' });
@@ -129,7 +136,7 @@ export const forgotPassword = async (req, res) => {
     }
 
     const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); 
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
     await prisma.user.update({
       where: { email },
@@ -146,7 +153,6 @@ export const forgotPassword = async (req, res) => {
 };
 
 export const resetPassword = async (req, res) => {
-
   const { token, newPassword } = req.body;
   if (!token || !newPassword) {
     return res.status(400).json({ error: 'Token and new password are required' });
