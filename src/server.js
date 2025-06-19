@@ -15,10 +15,7 @@ const io = new SocketIOServer(httpServer, {
   },
 });
 
-app.use((req, res, next) => {
-  req.io = io;
-  next();
-});
+app.set('io', io);
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -35,6 +32,7 @@ io.use((socket, next) => {
     next(new Error('Authentication error: invalid token'));
   }
 });
+
 
 io.on('connection', async (socket) => {
   console.log(`🔌 User connected (socket): ${socket.user.id}`);
@@ -169,11 +167,6 @@ io.on('connection', async (socket) => {
     console.log(`❌ User disconnected: ${socket.user.id} (${reason})`);
   });
 });
-
-console.log('KEY:', `[${process.env.CLOUDINARY_API_KEY}]`);
-console.log('SECRET:', `[${process.env.CLOUDINARY_API_SECRET}]`);
-console.log('CLOUD_NAME:', `[${process.env.CLOUDINARY_CLOUD_NAME}]`);
-
 
 
 const PORT = process.env.PORT || 5000;
