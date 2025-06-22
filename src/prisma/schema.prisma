@@ -39,6 +39,13 @@ enum PaymentStatus {
   PENDING
 }
 
+/// ─── New enum for admin approval workflow ───
+enum ListingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model RoleRequest {
   id            String        @id @default(uuid())
   user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -49,22 +56,22 @@ model RoleRequest {
 }
 
 model User {
-  id                          String   @id @default(uuid())
+  id                          String                @id @default(uuid())
   role                        Role
-  email                       String   @unique
+  email                       String                @unique
   password                    String
   name                        String
   profilePhoto                String?
-  bookings                    Booking[]          @relation("TenantBookings")
-  properties                  Property[]         @relation("LandlordProperties")
+  bookings                    Booking[]             @relation("TenantBookings")
+  properties                  Property[]            @relation("LandlordProperties")
   reviews                     Review[]
-  sentMessages                Message[]          @relation("SentMessages")
-  recvMessages                Message[]          @relation("RecvMessages")
+  sentMessages                Message[]             @relation("SentMessages")
+  recvMessages                Message[]             @relation("RecvMessages")
   subscriptions               PushSubscription[]
-  createdAt                   DateTime           @default(now())
-  updatedAt                   DateTime           @updatedAt
+  createdAt                   DateTime              @default(now())
+  updatedAt                   DateTime              @updatedAt
   RoleRequest                 RoleRequest?
-  isVerified                  Boolean            @default(false)
+  isVerified                  Boolean               @default(false)
   verificationToken           String?
   verificationTokenExpiresAt  DateTime?
   resetToken                  String?
@@ -72,23 +79,29 @@ model User {
 }
 
 model Property {
-  id            String          @id @default(uuid())
-  landlord      User            @relation("LandlordProperties", fields: [landlordId], references: [id], onDelete: Cascade)
-  landlordId    String
-  title         String
-  description   String
-  city          String
-  rentPerMonth  Decimal         @db.Decimal(10, 2)
-  numBedrooms   Int
-  numBathrooms  Int
-  propertyType  PropertyType
-  amenities     String[]
-  images        PropertyImage[]
-  bookings      Booking[]
-  reviews       Review[]
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  Message       Message[]
+  id               String           @id @default(uuid())
+  landlord         User             @relation("LandlordProperties", fields: [landlordId], references: [id], onDelete: Cascade)
+  landlordId       String
+  title            String
+  description      String
+  city             String
+  rentPerMonth     Decimal          @db.Decimal(10, 2)
+  numBedrooms      Int
+  numBathrooms     Int
+  propertyType     PropertyType
+  amenities        String[]
+  images           PropertyImage[]
+  bookings         Booking[]
+  reviews          Review[]
+
+  /// ─── Approval workflow fields ───
+  status           ListingStatus    @default(PENDING)
+  rejectionReason  String?
+
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  Message          Message[]
 
   @@index([city])
   @@index([rentPerMonth])
