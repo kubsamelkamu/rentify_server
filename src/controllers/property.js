@@ -1,5 +1,6 @@
 import { prisma } from '../app.js';
 import cloudinary from '../config/cloudinary.js';
+import { sendNewPropertyListingNotification } from '../utils/emailService.js';
 
 export const createProperty = async (req, res) => {
 
@@ -8,12 +9,12 @@ export const createProperty = async (req, res) => {
     return res.status(403).json({ error: 'Only landlords can create properties' });
   }
 
-  const {
-    title, description, city, rentPerMonth, numBedrooms, numBathrooms, propertyType, amenities,
+  const {title,description,city,rentPerMonth,numBedrooms,numBathrooms,propertyType,amenities,
   } = req.body;
 
-  if (!title || !description || !city || rentPerMonth == null ||
-      numBedrooms == null || numBathrooms == null || !propertyType || !Array.isArray(amenities)) {
+  if (!title ||!description ||!city ||rentPerMonth == null ||numBedrooms == null ||numBathrooms == null ||!propertyType ||
+    !Array.isArray(amenities)
+  ) {
     return res.status(400).json({ error: 'All fields are required and must be valid' });
   }
 
@@ -29,32 +30,49 @@ export const createProperty = async (req, res) => {
         propertyType,
         amenities,
         landlord: { connect: { id: landlordId } },
+        status: 'PENDING',
       },
     });
 
     const io = req.app.get('io');
-    io.emit('admin:newProperty', newProperty);
+    io.emit('listing:pending', newProperty);
+    let landlordName = 'Landlord';
+    try {
+      const landlord = await prisma.user.findUnique({ where: { id: landlordId } });
+      if (landlord && landlord.name) landlordName = landlord.name;
+    } catch (e) {
+      console.warn('Could not fetch landlord name for email:', e);
+    }
 
-    res.status(201).json(newProperty);
+    try {
+      await sendNewPropertyListingNotification({
+        landlordName,
+        propertyTitle: newProperty.title,
+        city: newProperty.city,
+        propertyId: newProperty.id,
+      });
+    } catch (emailErr) {
+      console.error('Failed to send new listing notification:', emailErr);
+    }
+
+    return res.status(201).json(newProperty);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Could not create property' });
+    console.error('createProperty error:', error);
+    return res.status(500).json({ error: 'Could not create property' });
   }
 };
 
 export const getAllProperties = async (req, res) => {
-
+  
   try {
-    const {
-      city, minPrice, maxPrice, minBedrooms, maxBedrooms, propertyType, amenities,
-      availableFrom, availableTo, page, limit,
+    const {city,minPrice,maxPrice,minBedrooms,maxBedrooms,propertyType,amenities,availableFrom,availableTo,page,limit,
     } = req.query;
 
-    const pageNum  = Math.max(parseInt(page, 10) || 1, 1);
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
     const limitNum = Math.max(parseInt(limit, 10) || 9, 1);
-    const skip     = (pageNum - 1) * limitNum;
+    const skip = (pageNum - 1) * limitNum;
 
-    const where = {};
+    const where = { status: 'APPROVED' };
 
     if (typeof city === 'string' && city.trim()) {
       where.city = { contains: city.trim(), mode: 'insensitive' };
@@ -78,14 +96,12 @@ export const getAllProperties = async (req, res) => {
     }
     if (availableFrom && availableTo) {
       const from = new Date(availableFrom);
-      const to   = new Date(availableTo);
+      const to = new Date(availableTo);
       if (from < to) {
         where.bookings = {
           none: {
             status: 'CONFIRMED',
-            OR: [
-              { startDate: { lte: to }, endDate: { gte: from } },
-            ],
+            OR: [{ startDate: { lte: to }, endDate: { gte: from } }],
           },
         };
       }
@@ -139,8 +155,8 @@ export const getPropertyById = async (req, res) => {
   }
 };
 
-// Update property
 export const updateProperty = async (req, res) => {
+
   const { id } = req.params;
   const { userId } = req.user;
 
@@ -181,8 +197,9 @@ export const updateProperty = async (req, res) => {
   }
 };
 
-// Delete property
+
 export const deleteProperty = async (req, res) => {
+
   const { id } = req.params;
   const { role, userId } = req.user;
 
