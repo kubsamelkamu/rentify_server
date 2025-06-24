@@ -18,6 +18,8 @@ import {
 
 const router = Router();
 
+router.get('/metrics', getSiteMetrics);
+
 router.use(auth);
 router.use((req, res, next) => {
   if (req.user.role !== 'ADMIN') {
@@ -40,6 +42,6 @@ router.put('/bookings/:id/status', updateBookingStatus);
 router.get('/reviews', getAllReviews);
 router.delete('/reviews/:id', deleteReviewByAdmin);
 
-router.get('/metrics', getSiteMetrics);
+
 
 export default router;
