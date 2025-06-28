@@ -9,15 +9,33 @@ export const getAllUsers = async (req, res) => {
   try {
     const page  = parseInt(req.query.page  || '1', 10);
     const limit = parseInt(req.query.limit || '5', 10);
+    const search = req.query.search || '';
+
     if (isNaN(page) || isNaN(limit) || page < 1 || limit < 1) {
       return res.status(400).json({ error: 'page and limit must be positive integers' });
     }
 
-    const skip       = (page - 1) * limit;
-    const totalUsers = await prisma.user.count();
+    const skip = (page - 1) * limit;
+    const whereClause = search
+      ? {
+          OR: [
+            { name: { contains: search, mode: 'insensitive' } },
+            { email: { contains: search, mode: 'insensitive' } },
+          ],
+        }
+      : {};
+
+    const totalUsers = await prisma.user.count({ where: whereClause });
 
     const users = await prisma.user.findMany({
-      select: { id: true, name: true, email: true, role: true, createdAt: true },
+      where: whereClause,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+      },
       orderBy: { createdAt: 'desc' },
       skip,
       take: limit,
@@ -38,6 +56,7 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
+
 export const changeUserRole = async (req, res) => {
 
   const targetUserId = req.params.id;
@@ -54,14 +73,21 @@ export const changeUserRole = async (req, res) => {
     const updatedUser = await prisma.user.update({
       where: { id: targetUserId },
       data: { role },
-      select: { id: true, name: true, email: true, role: true, profilePhoto: true },
+      select: {
+        id:           true,
+        name:         true,
+        email:        true,
+        role:         true,
+        profilePhoto: true,
+        createdAt:    true  
+      },
     });
 
     if (role === 'LANDLORD') {
       try {
         await sendLandlordPromotion({
           userName: updatedUser.name || 'User',
-          toEmail: updatedUser.email,
+          toEmail:  updatedUser.email,
         });
       } catch (emailErr) {
         console.error('sendLandlordPromotion error:', emailErr);
@@ -73,11 +99,12 @@ export const changeUserRole = async (req, res) => {
 
     return res.json({
       user: {
-        id: updatedUser.id,
-        name: updatedUser.name,
-        email: updatedUser.email,
-        role: updatedUser.role,
+        id:           updatedUser.id,
+        name:         updatedUser.name,
+        email:        updatedUser.email,
+        role:         updatedUser.role,
         profilePhoto: updatedUser.profilePhoto,
+        createdAt:    updatedUser.createdAt
       },
       token: newToken,
     });
@@ -171,7 +198,6 @@ export const approveLandlord = async (req, res) => {
   const { userId } = req.params;
 
   try {
-    // 1) Update request status, user role, and docs
     await prisma.$transaction([
       prisma.roleRequest.update({
         where: { userId },
@@ -191,13 +217,10 @@ export const approveLandlord = async (req, res) => {
       }),
     ]);
 
-    // 2) Fetch applicant’s info for emailing
     const applicant = await prisma.user.findUnique({
       where: { id: userId },
       select: { name: true, email: true },
     });
-
-    // 3) Send “approved” notification
     if (applicant) {
       try {
         await sendLandlordApplicationApprovedEmail({
