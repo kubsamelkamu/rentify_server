@@ -1,6 +1,7 @@
 import { prisma } from '../app.js';
 import { sendLandlordPromotion , sendPropertyApprovalEmail,sendPropertyRejectionEmail,
 sendLandlordApplicationApprovedEmail,sendLandlordApplicationRejectedEmail} from '../utils/emailService.js';
+import ExcelJS from 'exceljs';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -56,6 +57,47 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
+export const exportUsers = async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: { name: true, email: true, role: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Users');
+
+    sheet.columns = [
+      { header: 'Name',      key: 'name',      width: 30 },
+      { header: 'Email',     key: 'email',     width: 30 },
+      { header: 'Role',      key: 'role',      width: 15 },
+      { header: 'Joined At', key: 'createdAt', width: 20 },
+    ];
+
+    users.forEach(u => {
+      sheet.addRow({
+        name:      u.name,
+        email:     u.email,
+        role:      u.role,
+        createdAt: u.createdAt.toISOString(),
+      });
+    });
+
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="rentify-users.xlsx"'
+    );
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error('exportUsers error:', err);
+    res.status(500).json({ error: 'Could not export users' });
+  }
+};
 
 export const changeUserRole = async (req, res) => {
 
