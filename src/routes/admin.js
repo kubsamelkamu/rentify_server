@@ -34,7 +34,7 @@ router.use((req, res, next) => {
 
 router.get('/users', getAllUsers);
 router.get(
-  '/admin/users/export',
+  '/users/export',
   exportUsers
 );
 router.delete('/users/:id', deleteUser);
