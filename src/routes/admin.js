@@ -3,6 +3,9 @@ import auth from '../middlewares/auth.js';
 import {
   getAllUsers,
   deleteUser,
+  listLandlordRequests,
+  approveLandlord,
+  rejectLandlord,
 
   getAllProperties,
   approveProperty,    
@@ -30,6 +33,21 @@ router.use((req, res, next) => {
 
 router.get('/users', getAllUsers);
 router.delete('/users/:id', deleteUser);
+
+router.get(
+  '/landlord-requests',
+  listLandlordRequests
+);
+
+router.post(
+  '/landlord-requests/:userId/approve',
+  approveLandlord
+);
+
+router.post(
+  '/landlord-requests/:userId/reject',
+  rejectLandlord
+);
 
 router.get('/properties', getAllProperties);
 router.post('/properties/:id/approve', approveProperty); 

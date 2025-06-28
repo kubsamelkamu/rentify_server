@@ -2,7 +2,9 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../app.js';
 import crypto from 'crypto';
-import {sendResetPasswordEmail,sendVerificationEmail} from '../utils/emailService.js';
+import cloudinary from '../config/cloudinary.js';
+import {sendResetPasswordEmail,sendVerificationEmail,  sendLandlordApplicationPendingAdminEmail,
+sendLandlordApplicationReceivedEmail,} from '../utils/emailService.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -124,6 +126,7 @@ export const verifyEmail = async (req, res) => {
 };
 
 export const forgotPassword = async (req, res) => {
+
   const { email } = req.body;
   if (!email) {
     return res.status(400).json({ error: 'Email is required' });
@@ -153,6 +156,7 @@ export const forgotPassword = async (req, res) => {
 };
 
 export const resetPassword = async (req, res) => {
+  
   const { token, newPassword } = req.body;
   if (!token || !newPassword) {
     return res.status(400).json({ error: 'Token and new password are required' });
@@ -180,6 +184,71 @@ export const resetPassword = async (req, res) => {
     return res.status(200).json({ message: 'Password reset successfully. You can now log in.' });
   } catch {
     return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const applyForLandlord = async (req, res) => {
+
+  const userId = req.user.userId;
+  const files  = req.files || [];
+
+  if (files.length === 0) {
+    return res.status(400).json({ error: 'Please upload at least one document.' });
+  }
+
+  try {
+ 
+    await prisma.roleRequest.upsert({
+      where:  { userId },
+      update: { requestedRole: 'LANDLORD', status: 'PENDING' },
+      create: { userId, requestedRole: 'LANDLORD', status: 'PENDING' },
+    });
+
+    await Promise.all(
+      files.map((file) =>
+        new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: 'landlord_docs' },
+            (err, result) => (err ? reject(err) : resolve(result))
+          );
+          stream.end(file.buffer);
+        }).then((uploadResult) =>
+          prisma.landlordDoc.create({
+            data: {
+              userId,
+              publicId: uploadResult.public_id,
+              url:      uploadResult.secure_url,
+              docType:  file.fieldname,
+            },
+          })
+        )
+      )
+    );
+
+    try {
+      await sendLandlordApplicationPendingAdminEmail({
+        applicantName:  req.user.name,
+        applicantEmail: req.user.email,
+        reviewLink:     `${process.env.FRONTEND_URL}/admin/landlord-requests`,
+      });
+    } catch (emailErr) {
+      console.error('Failed to email admin about new landlord request:', emailErr);
+    }
+
+    try {
+      await sendLandlordApplicationReceivedEmail({
+        userName:    req.user.name,
+        toEmail:     req.user.email,
+        profileLink: `${process.env.FRONTEND_URL}/profile`,          
+      });
+    } catch (emailErr) {
+      console.error('Failed to email applicant confirmation:', emailErr);
+    }
+
+    return res.json({ message: 'Application submitted, awaiting admin review.' });
+  } catch (err) {
+    console.error('applyForLandlord error:', err);
+    return res.status(500).json({ error: 'Failed to submit application.' });
   }
 };
 
