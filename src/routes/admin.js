@@ -2,6 +2,7 @@ import { Router } from 'express';
 import auth from '../middlewares/auth.js';
 import {
   getAllUsers,
+  exportUsers,
   deleteUser,
   listLandlordRequests,
   approveLandlord,
@@ -32,6 +33,10 @@ router.use((req, res, next) => {
 });
 
 router.get('/users', getAllUsers);
+router.get(
+  '/admin/users/export',
+  exportUsers
+);
 router.delete('/users/:id', deleteUser);
 
 router.get(
