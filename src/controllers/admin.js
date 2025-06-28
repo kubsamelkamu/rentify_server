@@ -1,5 +1,6 @@
 import { prisma } from '../app.js';
-import { sendLandlordPromotion , sendPropertyApprovalEmail,sendPropertyRejectionEmail} from '../utils/emailService.js';
+import { sendLandlordPromotion , sendPropertyApprovalEmail,sendPropertyRejectionEmail,
+sendLandlordApplicationApprovedEmail,sendLandlordApplicationRejectedEmail} from '../utils/emailService.js';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -103,6 +104,165 @@ export const deleteUser = async (req, res) => {
   } catch (err) {
     console.error('deleteUser error:', err);
     return res.status(500).json({ error: 'Could not delete user' });
+  }
+};
+
+export const listLandlordRequests = async (req, res) => {
+
+  try {
+    const page   = Math.max(parseInt(req.query.page,  10) || 1,  1);
+    const limit  = Math.max(parseInt(req.query.limit, 10) || 5,  1);
+    const status = req.query.status || 'PENDING';
+
+    if (!['PENDING', 'APPROVED', 'REJECTED'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status filter' });
+    }
+
+    const where = { requestedRole: 'LANDLORD', status };
+    const totalRequests = await prisma.roleRequest.count({ where });
+    const skip = (page - 1) * limit;
+    const raw = await prisma.roleRequest.findMany({
+      where,
+      skip,
+      take: limit,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            profilePhoto: true,
+            landlordDocs: {
+              select: { id: true, url: true, docType: true, status: true },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const requests = raw.map((r) => ({
+      id: r.user.id,
+      name: r.user.name,
+      email: r.user.email,
+      profilePhoto: r.user.profilePhoto,
+      landlordDocs: r.user.landlordDocs,
+      requestStatus: r.status,
+      requestedAt:  r.createdAt,
+    }));
+
+    const totalPages = Math.ceil(totalRequests / limit);
+
+    return res.json({
+      requests,
+      page,
+      totalPages,
+      totalRequests,
+    });
+  } catch (err) {
+    console.error('listLandlordRequests error:', err);
+    return res.status(500).json({ error: 'Could not fetch landlord requests' });
+  }
+};
+
+
+export const approveLandlord = async (req, res) => {
+  const adminId = req.user.userId;
+  const { userId } = req.params;
+
+  try {
+    // 1) Update request status, user role, and docs
+    await prisma.$transaction([
+      prisma.roleRequest.update({
+        where: { userId },
+        data: { status: 'APPROVED' },
+      }),
+      prisma.user.update({
+        where: { id: userId },
+        data: { role: 'LANDLORD' },
+      }),
+      prisma.landlordDoc.updateMany({
+        where: { userId },
+        data: {
+          status: 'APPROVED',
+          reviewedAt: new Date(),
+          reviewerId: adminId,
+        },
+      }),
+    ]);
+
+    // 2) Fetch applicant’s info for emailing
+    const applicant = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true },
+    });
+
+    // 3) Send “approved” notification
+    if (applicant) {
+      try {
+        await sendLandlordApplicationApprovedEmail({
+          userName: applicant.name,
+          toEmail:  applicant.email,
+        });
+      } catch (emailErr) {
+        console.error('Failed to send landlord-approved email:', emailErr);
+      }
+    }
+    return res.json({ message: 'Landlord application approved.' });
+  } catch (err) {
+    console.error('approveLandlord error:', err);
+    return res.status(500).json({ error: 'Could not approve application' });
+  }
+};
+
+export const rejectLandlord = async (req, res) => {
+
+  const adminId = req.user.userId;
+  const { userId } = req.params;
+  const { reason } = req.body;
+
+  if (!reason || typeof reason !== 'string') {
+    return res.status(400).json({ error: 'Rejection reason is required' });
+  }
+
+  try {
+    await prisma.$transaction([
+      prisma.roleRequest.update({
+        where: { userId },
+        data: { status: 'REJECTED' },
+      }),
+      prisma.landlordDoc.updateMany({
+        where: { userId },
+        data: {
+          status: 'REJECTED',
+          reason,
+          reviewedAt: new Date(),
+          reviewerId: adminId,
+        },
+      }),
+    ]);
+
+    const applicant = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true },
+    });
+
+    if (applicant) {
+      try {
+        await sendLandlordApplicationRejectedEmail({
+          userName: applicant.name,
+          toEmail:  applicant.email,
+          reason,
+        });
+      } catch (emailErr) {
+        console.error('Failed to send landlord-rejected email:', emailErr);
+      }
+    }
+
+    return res.json({ message: 'Landlord application rejected.' });
+  } catch (err) {
+    console.error('rejectLandlord error:', err);
+    return res.status(500).json({ error: 'Could not reject application' });
   }
 };
 
@@ -235,6 +395,7 @@ export const deletePropertyByAdmin = async (req, res) => {
 };
 
 export const getAllBookings = async (req, res) => {
+  
   try {
     const page  = parseInt(req.query.page  || '1', 10);
     const limit = parseInt(req.query.limit || '5', 10);

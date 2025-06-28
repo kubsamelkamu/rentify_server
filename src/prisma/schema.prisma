@@ -39,7 +39,6 @@ enum PaymentStatus {
   PENDING
 }
 
-/// ─── New enum for admin approval workflow ───
 enum ListingStatus {
   PENDING
   APPROVED
@@ -53,6 +52,22 @@ model RoleRequest {
   requestedRole Role
   status        RequestStatus
   createdAt     DateTime      @default(now())
+}
+
+model LandlordDoc {
+  id          String        @id @default(uuid())
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  publicId    String       
+  url         String        
+  docType     String      
+  status      RequestStatus @default(PENDING)
+  reason      String?      
+  uploadedAt  DateTime      @default(now())
+  reviewedAt  DateTime?
+  reviewerId  String?     
+
+  @@index([userId, status])
 }
 
 model User {
@@ -71,12 +86,14 @@ model User {
   createdAt                   DateTime              @default(now())
   updatedAt                   DateTime              @updatedAt
   RoleRequest                 RoleRequest?
+  landlordDocs                LandlordDoc[]
   isVerified                  Boolean               @default(false)
   verificationToken           String?
   verificationTokenExpiresAt  DateTime?
   resetToken                  String?
   resetTokenExpiresAt         DateTime?
 }
+
 
 model Property {
   id               String           @id @default(uuid())
