@@ -87,6 +87,7 @@ export async function sendLandlordPromotion(userName, toEmail) {
 
 
 export async function sendBookingRequest(opts) {
+  
   const {landlordName,toEmail,propertyTitle,propertyCity,startDate,endDate,tenantName,tenantEmail,bookingLink
   } = opts;
 
@@ -326,4 +327,92 @@ export async function sendPropertyRejectionEmail(opts) {
   };
   return sendEmail('https://api.brevo.com/v3/smtp/email', payload);
 }
+
+export async function sendLandlordApplicationPendingAdminEmail(opts) {
+
+  const { applicantName, applicantEmail, reviewLink } = opts; 
+  const submittedAt = new Date().toLocaleString();
+  const year        = new Date().getFullYear();
+
+  const payload = {
+    sender:     { name: SENDER_NAME, email: SENDER_EMAIL },
+    to:         [{ email: 'kubsamlkm@gmail.com', name: 'Admin' }],
+    templateId: Number(process.env.BREVO_LANDLORD_APPLICATION_PENDING_ADMIN_TEMPLATE_ID),
+    params: {
+      applicantName,
+      applicantEmail,
+      submittedAt,
+      reviewLink,
+      year,
+    },
+  };
+
+  return sendEmail('https://api.brevo.com/v3/smtp/email', payload);
+}
+
+export async function sendLandlordApplicationReceivedEmail(opts) {
+
+  const { userName, toEmail, profileLink, } = opts;
+  const safeName  = sanitizeName(userName);
+  const firstName = safeName.split(' ')[0];
+  const year      = new Date().getFullYear();
+
+  const payload = {
+    sender:     { name: SENDER_NAME, email: SENDER_EMAIL },
+    to:         [{ email: toEmail, name: safeName }],
+    templateId: Number(process.env.BREVO_LANDLORD_APPLICATION_RECEIVED_TEMPLATE_ID),
+    params: {
+      firstName,
+      profileLink,
+      year,
+    },
+  };
+
+  return sendEmail('https://api.brevo.com/v3/smtp/email', payload);
+}
+
+
+export async function sendLandlordApplicationApprovedEmail(opts) {
+
+  const { userName, toEmail } = opts;
+  const safeName  = sanitizeName(userName);
+  const firstName = safeName.split(' ')[0];
+  const year      = new Date().getFullYear();
+
+  const payload = {
+    sender: { name: SENDER_NAME, email: SENDER_EMAIL },
+    to: [{ email: toEmail, name: safeName }],
+    templateId: Number(process.env.BREVO_LANDLORD_APPLICATION_APPROVED_TEMPLATE_ID),
+    params: {
+      firstName,
+      dashboardLink: `${process.env.FRONTEND_URL}/properties/list`,
+      year
+    }
+  };
+
+  return sendEmail('https://api.brevo.com/v3/smtp/email', payload);
+}
+
+export async function sendLandlordApplicationRejectedEmail(opts) {
+
+  const { userName, toEmail, reason } = opts;
+  const safeName  = sanitizeName(userName);
+  const firstName = safeName.split(' ')[0];
+  const year      = new Date().getFullYear();
+
+  const payload = {
+    sender: { name: SENDER_NAME, email: SENDER_EMAIL },
+    to: [{ email: toEmail, name: safeName }],
+    templateId: Number(process.env.BREVO_LANDLORD_APPLICATION_REJECTED_TEMPLATE_ID),
+    params: {
+      firstName,
+      reason,
+      supportLink: `${process.env.FRONTEND_URL}/contact`,
+      year
+    }
+  };
+
+  return sendEmail('https://api.brevo.com/v3/smtp/email', payload);
+}
+
 
