@@ -1,5 +1,6 @@
 import { prisma } from '../app.js';
 import cloudinary from '../config/cloudinary.js';
+import ExcelJS from 'exceljs';
 import { sendNewPropertyListingNotification } from '../utils/emailService.js';
 
 export const createProperty = async (req, res) => {
@@ -61,6 +62,67 @@ export const createProperty = async (req, res) => {
     return res.status(500).json({ error: 'Could not create property' });
   }
 };
+
+
+export const exportProperties = async (req, res) => {
+  try {
+    const props = await prisma.property.findMany({
+      select: {
+        id: true,
+        title: true,
+        city: true,
+        rentPerMonth: true,
+        status: true,
+        rejectionReason: true,
+        createdAt: true,
+        landlord: { select: { name: true, email: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const wb = new ExcelJS.Workbook();
+    const sheet = wb.addWorksheet('Properties');
+
+    sheet.columns = [
+      { header: 'Title',           key: 'title',         width: 30 },
+      { header: 'City',            key: 'city',          width: 20 },
+      { header: 'Rent/month (ETB)',key: 'rentPerMonth',  width: 15 },
+      { header: 'Status',          key: 'status',        width: 12 },
+      { header: 'Rejection Reason',key: 'rejectionReason', width: 30 },
+      { header: 'Created At',      key: 'createdAt',     width: 20 },
+      { header: 'Landlord Name',   key: 'landlordName',  width: 25 },
+      { header: 'Landlord Email',  key: 'landlordEmail', width: 30 },
+    ];
+
+    props.forEach((p) => {
+      sheet.addRow({
+        title:           p.title,
+        city:            p.city,
+        rentPerMonth:    p.rentPerMonth,
+        status:          p.status,
+        rejectionReason: p.rejectionReason || '',
+        createdAt:       p.createdAt.toISOString(),
+        landlordName:    p.landlord?.name ?? '',
+        landlordEmail:   p.landlord?.email ?? '',
+      });
+    });
+
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="rentify-properties.xlsx"'
+    );
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    await wb.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error('exportProperties error:', err);
+    res.status(500).json({ error: 'Could not export properties' });
+  }
+};
+
 
 export const getAllProperties = async (req, res) => {
   
