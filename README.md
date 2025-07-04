@@ -33,7 +33,7 @@ An **Express.js**, **Javascript**, and **Prisma** API server powering the Rentif
 ## 🛠️ Tech Stack
 
 - **Server Framework**: [Express.js](https://expressjs.com/)  
-- **Language**: [Javascript](https://www.javascript.org/)  
+- **Language**: [Javascript](https://www.typescriptlang.org/)  
 - **ORM**: [Prisma](https://www.prisma.io/)  
 - **Database**: PostgreSQL  
 - **Real‑time**: [Socket.IO Server](https://socket.io/)  
@@ -112,4 +112,66 @@ An **Express.js**, **Javascript**, and **Prisma** API server powering the Rentif
 │   │   └── user.js
 │   └── utils/
 │       └── emailService.js
+
+## 📦 Prerequisites
+
+- [Node.js](https://nodejs.org/) ≥ 16.x  
+- npm, yarn, or pnpm  
+- PostgreSQL database  
+
+---
+
+## 📥 Installation & Setup
+
+1. **Clone the repository**  
+   ```bash
+   git clone https://github.com/kubsamelkamu/rentify_server.git
+   cd rentify_server
+2. Install Dependencies
+    ```bash
+    npm install
+    # or
+    yarn install
+    # or
+    pnpm install
+
+3.configure enviroment Variables
+
+Create a file named .env in the project root with the following content:
+```ini 
+    BACKEND_URL=http://localhost:5000
+    FRONTEND_URL=http://localhost:3000
+    DATABASE_URL=postgresql://<user>:<password>@<host>:<port>/<db>?schema=public
+    JWT_SECRET=your_jwt_secret
+    CHAPA_PUBLIC_KEY=your_chapa_public_key
+    CHAPA_SECRET_KEY=your_chapa_secret_key
+    CLOUDINARY_CLOUD_NAME=your cloudinary name
+    CLOUDINARY_API_KEY=cloudinary api key
+    CLOUDINARY_API_SECRET=cloudinary api secret key
+    Brevo_API_KEY=your_brevo_api_key
+    PORT=5000
+```
+4.Set up the database
+  ```bash 
+  npx prisma migrate dev   
+  ```
+5.Run development Server
+  ```bash 
+  npm run dev
+  ```
+
+## 📜 Available Scripts
+
+In the project directory, you can run the following commands:
+
+### `npm run dev`
+Starts the server in development mode (with automatic reload via nodemon).  
+
+### `npm run  lint`
+Runs ESLint to check code quality and style.
+### `npm run test`
+Runs the test suite.
+
+
+
 
