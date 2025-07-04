@@ -138,7 +138,7 @@ An **Express.js**, **Javascript**, and **Prisma** API server powering the Rentif
 3.configure enviroment Variables
 
 Create a file named .env in the project root with the following content:
-```ini 
+ 
     BACKEND_URL=http://localhost:5000
     FRONTEND_URL=http://localhost:3000
     DATABASE_URL=postgresql://<user>:<password>@<host>:<port>/<db>?schema=public
@@ -150,7 +150,7 @@ Create a file named .env in the project root with the following content:
     CLOUDINARY_API_SECRET=cloudinary api secret key
     Brevo_API_KEY=your_brevo_api_key
     PORT=5000
- ```
+
 4.Set up the database
   ```bash 
   npx prisma migrate dev   
@@ -171,6 +171,90 @@ Starts the server in development mode (with automatic reload via nodemon).
 Runs ESLint to check code quality and style.
 ### `npm run test`
 Runs the test suite.
+
+## 📫 API Endpoints
+
+### Authentication
+| Method | Path                         | Description                       |
+| ------ | ---------------------------- | --------------------------------- |
+| POST   | `/api/auth/register`         | Register a new user               |
+| POST   | `/api/auth/login`            | Log in an existing user           |
+| POST   | `/api/auth/verify`           | Verify email/token                |
+| POST   | `/api/auth/forgot-password`  | Request password reset            |
+| POST   | `/api/auth/reset-password`   | Reset password via token          |
+| POST   | `/api/auth/apply-landlord`   | Submit landlord application       |
+
+### Users
+| Method | Path                          | Description                          |
+| ------ | ----------------------------- | ------------------------------------ |
+| GET    | `/api/users/me`               | Get current user profile             |
+| PUT    | `/api/users/me`               | Update current user profile          |
+| POST   | `/api/users/apply-landlord`   | (alias) Apply to become landlord      |
+| PUT    | `/api/users/:id/role`         | Change a user’s role (admin only)    |
+
+### Properties
+| Method | Path                                     | Description                               |
+| ------ | ---------------------------------------- | ----------------------------------------- |
+| GET    | `/api/properties`                        | Fetch all properties                      |
+| GET    | `/api/properties/export`                 | Export properties (CSV/XLS)               |
+| GET    | `/api/properties/:id`                    | Fetch a single property by ID             |
+| POST   | `/api/properties`                        | Create a new property (landlord only)     |
+| PUT    | `/api/properties/:id`                    | Update an existing property               |
+| DELETE | `/api/properties/:id`                    | Delete a property                         |
+| POST   | `/api/properties/:id/images`             | Upload images for a property              |
+| GET    | `/api/properties/:id/messages`           | Fetch messages related to a property      |
+
+### Bookings
+| Method | Path                                 | Description                                |
+| ------ | ------------------------------------ | ------------------------------------------ |
+| GET    | `/api/bookings`                      | Fetch all bookings                         |
+| GET    | `/api/bookings/property/:propertyId` | Fetch bookings for a specific property     |
+| GET    | `/api/bookings/user`                 | Fetch bookings for the currently logged‑in user |
+| GET    | `/api/bookings/landlord`             | Fetch bookings for properties you own      |
+| GET    | `/api/bookings/:id`                  | Fetch a single booking by ID               |
+| POST   | `/api/bookings`                      | Create a new booking                       |
+| PUT    | `/api/bookings/:id/confirm`          | Confirm a booking                          |
+| PUT    | `/api/bookings/:id/reject`           | Reject a booking                           |
+
+### Payments
+| Method | Path                          | Description                         |
+| ------ | ----------------------------- | ----------------------------------- |
+| POST   | `/api/payments/initiate`      | Start a payment transaction         |
+| POST   | `/api/payments/webhook`       | Handle payment gateway callbacks    |
+
+### Reviews
+| Method | Path                                      | Description                        |
+| ------ | ----------------------------------------- | ---------------------------------- |
+| POST   | `/api/reviews/:propertyId`                | Submit a new review for a property |
+| GET    | `/api/reviews/:propertyId`                | Get all reviews for a property     |
+| PUT    | `/api/reviews/:propertyId`                | Update a review                    |
+| DELETE | `/api/reviews/:propertyId`                | Delete a review                    |
+
+### Contact & Newsletter
+| Method | Path               | Description                   |
+| ------ | ------------------ | ----------------------------- |
+| POST   | `/api/contact`     | Send a contact message        |
+| POST   | `/api/newsletter`  | Subscribe to newsletter       |
+
+### Admin (all routes require admin role)
+| Method | Path                                   | Description                                   |
+| ------ | -------------------------------------- | --------------------------------------------- |
+| GET    | `/api/admin/metrics`                   | Get site metrics                              |
+| GET    | `/api/admin/users`                     | List all users                                |
+| POST   | `/api/admin/users/export`              | Export users (CSV/XLS)                        |
+| GET    | `/api/admin/users/:id`                 | Get a user by ID                              |
+| PUT    | `/api/admin/users/:id/role`            | Change a user’s role                          |
+| GET    | `/api/admin/landlord-requests`         | List landlord requests                        |
+| PUT    | `/api/admin/landlord-requests/:userId/approve` | Approve a landlord request           |
+| PUT    | `/api/admin/landlord-requests/:userId/reject`  | Reject a landlord request            |
+| GET    | `/api/admin/properties`                | List all properties (admin view)              |
+| PUT    | `/api/admin/properties/:id/approve`    | Approve a property                            |
+| PUT    | `/api/admin/properties/:id/reject`     | Reject a property                             |
+| DELETE | `/api/admin/properties/:id`            | Delete a property                             |
+| GET    | `/api/admin/bookings`                  | List all bookings (admin view)                |
+| PUT    | `/api/admin/bookings/:id/status`       | Update booking status                         |
+| GET    | `/api/admin/reviews`                   | List all reviews                              |
+| DELETE | `/api/admin/reviews/:id`               | Delete a review                               |
 
 
 
