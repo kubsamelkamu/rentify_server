@@ -256,6 +256,59 @@ Runs the test suite.
 | GET    | `/api/admin/reviews`                   | List all reviews                              |
 | DELETE | `/api/admin/reviews/:id`               | Delete a review                               |
 
+## 🤝 Contributing
+
+To contribute to the Rentify Client project, please follow these steps:
+
+1. **Fork** the repository  
+   Click the “Fork” button in the top-right corner of the GitHub page.
+
+2. **Clone** your fork locally  
+   ```bash
+   git clone https://github.com/kubsamelkamu/rentify_server.git
+   cd Rentify
+   ```
+3.Create a feature branch
+   ``` bash 
+   git checkout -b feature/my-new-feature
+   ```
+4.Install dependencies and run the project
+   ``` bash
+   npm install
+   npm run dev
+   ```
+5.Implement your changes
+   Follow existing coding style and conventions.
+
+   Add tests for new functionality.
+
+   Ensure ESLint  pass locally:
+   ```bash
+      npm run lint
+   ```
+6.Commit your changes
+   ```bash 
+   git add .
+   git commit -m "feat: describe your feature here"
+   ```
+7.Push to your fork
+   ```bash
+      git push origin feature/my-new-feature
+   ```
+8.Open a Pull Request
+   Go to the original rentify_server repository.
+   Click “New Pull Request” and select your branch.
+   Provide a clear title and description.
+   
+9.Review process
+   Respond to review comments.
+   Make any requested changes.
+   Once approved, your PR will be merged.
+
+
+
+
+
 
 
 
