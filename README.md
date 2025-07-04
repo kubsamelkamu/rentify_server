@@ -266,7 +266,7 @@ To contribute to the Rentify Client project, please follow these steps:
 2. **Clone** your fork locally  
    ```bash
    git clone https://github.com/kubsamelkamu/rentify_server.git
-   cd Rentify
+   cd rentify_server
    ```
 3.Create a feature branch
    ``` bash 
