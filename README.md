@@ -112,7 +112,7 @@ An **Express.js**, **Javascript**, and **Prisma** API server powering the Rentif
 │   │   └── user.js
 │   └── utils/
 │       └── emailService.js
-
+```
 ## 📦 Prerequisites
 
 - [Node.js](https://nodejs.org/) ≥ 16.x  
@@ -121,7 +121,7 @@ An **Express.js**, **Javascript**, and **Prisma** API server powering the Rentif
 
 ---
 
-## 📥 Installation & Setup
+## Installation & Setup
 
 1. **Clone the repository**  
    ```bash
@@ -134,7 +134,7 @@ An **Express.js**, **Javascript**, and **Prisma** API server powering the Rentif
     yarn install
     # or
     pnpm install
-
+  ```
 3.configure enviroment Variables
 
 Create a file named .env in the project root with the following content:
@@ -150,7 +150,7 @@ Create a file named .env in the project root with the following content:
     CLOUDINARY_API_SECRET=cloudinary api secret key
     Brevo_API_KEY=your_brevo_api_key
     PORT=5000
-```
+ ```
 4.Set up the database
   ```bash 
   npx prisma migrate dev   
