@@ -26,10 +26,12 @@ router.get('/metrics', getSiteMetrics);
 
 router.use(auth);
 router.use((req, res, next) => {
-  if (req.user.role !== 'ADMIN') {
-    return res.status(403).json({ error: 'Admins only' });
+  if (req.user.role === 'ADMIN' || req.user.role === 'SUPER_ADMIN') {
+      next();
+  }else{
+      return res.status(403).json({ error: 'Admins' });
   }
-  next();
+
 });
 
 router.get('/users', getAllUsers);
