@@ -16,6 +16,7 @@ enum RequestStatus {
 enum Role {
   TENANT
   LANDLORD
+  SUPER_ADMIN 
   ADMIN
 }
 

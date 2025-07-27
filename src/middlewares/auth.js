@@ -2,9 +2,7 @@ import jwt from 'jsonwebtoken';
 
 function auth(req, res, next) {
   
-  if (req.originalUrl === '/api/payments/webhook') {
-    return next();
-  }
+
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'No token provided' });
 

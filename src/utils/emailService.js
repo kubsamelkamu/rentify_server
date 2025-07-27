@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 export const BREVO_API_KEY                = process.env.BREVO_API_KEY;
 export const SENDER_NAME                  = process.env.EMAIL_SENDER_NAME    || 'Rentify';
 export const SENDER_EMAIL                 = process.env.EMAIL_SENDER_ADDRESS || 'srentify@gmail.com';
