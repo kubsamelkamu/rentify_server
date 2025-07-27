@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import adminRoutes from './routes/admin.js';
-import superAdminRoutes from './routes/superAdmin.js';
+import superAdminRoutes from './routes/superadmin.js';
 import authRoutes from './routes/auth.js';
 import bookingRoutes from './routes/booking.js';
 import contactRoutes from './routes/contact.js';
