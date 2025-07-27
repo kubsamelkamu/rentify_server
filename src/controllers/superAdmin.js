@@ -27,7 +27,7 @@ export const getAllAdmins = async (req, res) => {
         totalPages: Math.ceil(total / limit),
       },
     });
-  } catch (err) {
+  } catch {
     return res.status(500).json({ error: 'Could not fetch admins' });
   }
 };
@@ -66,7 +66,7 @@ export const createAdminUser = async (req, res) => {
     });
 
     return res.status(201).json({ user, token });
-  } catch (err) {
+  } catch {
     return res.status(500).json({ error: 'Could not create admin' });
   }
 };
