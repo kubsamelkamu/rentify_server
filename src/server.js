@@ -11,6 +11,7 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { ensureSuperAdmin } = require('./prisma/superAdmin.js'); 
 
+
 (async () => {
   try {
     await ensureSuperAdmin();            
