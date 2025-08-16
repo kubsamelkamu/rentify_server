@@ -14,7 +14,6 @@ router.get('/:id', getPropertyById);
 router.put('/:id', auth, updateProperty);
 router.delete('/:id', auth, deleteProperty);
 router.post('/:id/images', auth, upload.array('images', 2), uploadPropertyImages);
-
 router.post('/:id/messages',auth, sendMessage);
 
 export default router;

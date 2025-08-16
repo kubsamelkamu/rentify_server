@@ -338,9 +338,20 @@ export const getUserBookings = async (req, res) => {
       where: { tenantId: userId },
       orderBy: { createdAt: 'desc' },
       include: {
-        property: { select: { id: true, title: true, city: true, rentPerMonth: true } },
-        payment:  true
-      }
+        property: {
+          select: {
+            id: true,
+            title: true,
+            city: true,
+            rentPerMonth: true,
+            images: {
+              select: { url: true } 
+            }
+          }
+        },
+        payment: true
+}
+
     });
     res.json(bookings);
   } catch (err) {
@@ -362,7 +373,9 @@ export const getLandlordBookings = async (req, res) => {
       where: { property: { landlordId: userId } },
       orderBy: { createdAt: 'desc' },
       include: {
-        property: { select: { id: true, title: true, city: true, rentPerMonth: true } },
+        property: { select: { id: true, title: true, city: true, rentPerMonth: true ,  images: {
+              select: { url: true } 
+          }}},
         tenant:   { select: { id: true, name: true, email: true } },
         payment:  { select: { status: true } }
       }
