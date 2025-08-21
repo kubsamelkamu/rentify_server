@@ -38,6 +38,22 @@ export function sanitizeName(userName) {
   return name || 'User';
 }
 
+export async function sendVerificationOtpEmail(userName, toEmail, otp) {
+  const safeName = sanitizeName(userName);
+  const firstName = safeName.split(' ')[0];
+  const year = new Date().getFullYear();
+
+  const payload = {
+    sender: { name: SENDER_NAME, email: SENDER_EMAIL },
+    to: [{ email: toEmail, name: safeName }],
+    templateId: Number(process.env.BREVO_VERIFICATION_OTP_TEMPLATE_ID),
+    params: { firstName, otp, year },
+  };
+
+  return sendEmail('https://api.brevo.com/v3/smtp/email', payload);
+}
+
+
 export async function sendVerificationEmail(userName, toEmail, verificationUrl) {
 
   const safeName = sanitizeName(userName);
