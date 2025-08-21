@@ -88,9 +88,11 @@ model User {
   updatedAt                   DateTime              @updatedAt
   RoleRequest                 RoleRequest?
   landlordDocs                LandlordDoc[]
+
   isVerified                  Boolean               @default(false)
-  verificationToken           String?
-  verificationTokenExpiresAt  DateTime?
+  verificationOtp             String?               // hashed OTP
+  verificationOtpExpiresAt    DateTime?             // expiry timestamp
+
   resetToken                  String?
   resetTokenExpiresAt         DateTime?
 }
