@@ -12,6 +12,17 @@ router.post('/verify-otp', verifyOtp );
 router.post('/resend-otp', resendOtp ); 
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
-router.post('/apply-landlord',auth,upload.array('docs'),applyForLandlord);
+router.post(
+  "/apply-landlord",
+  auth,
+  upload.array("docs"),
+  (req, res, next) => {
+    console.log("[SERVER] Files received:", req.files);
+    console.log("[SERVER] Body received:", req.body);
+    next();
+  },
+  applyForLandlord
+);
+
 
 export default router;
