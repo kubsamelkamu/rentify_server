@@ -90,11 +90,15 @@ model User {
   landlordDocs                LandlordDoc[]
 
   isVerified                  Boolean               @default(false)
-  verificationOtp             String?               // hashed OTP
-  verificationOtpExpiresAt    DateTime?             // expiry timestamp
+  verificationOtp             String?
+  verificationOtpExpiresAt    DateTime?
 
   resetToken                  String?
   resetTokenExpiresAt         DateTime?
+
+
+  resetOtp                    String?
+  resetOtpExpiresAt           DateTime?
 }
 
 
@@ -114,7 +118,6 @@ model Property {
   bookings         Booking[]
   reviews          Review[]
 
-  /// ─── Approval workflow fields ───
   status           ListingStatus    @default(PENDING)
   rejectionReason  String?
 

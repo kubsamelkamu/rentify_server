@@ -1,7 +1,6 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../app.js';
-import crypto from 'crypto';
 import cloudinary from '../config/cloudinary.js';
 import {sendResetPasswordEmail,sendLandlordApplicationPendingAdminEmail,
 sendLandlordApplicationReceivedEmail,sendVerificationOtpEmail} from '../utils/emailService.js';
@@ -208,7 +207,6 @@ export const resendOtp = async (req, res) => {
 };
 
 export const forgotPassword = async (req, res) => {
-
   const { email } = req.body;
   if (!email) {
     return res.status(400).json({ error: 'Email is required' });
@@ -216,26 +214,37 @@ export const forgotPassword = async (req, res) => {
 
   try {
     const user = await prisma.user.findUnique({ where: { email } });
+
     if (!user) {
-      return res.status(200).json({ message: 'If that email exists, you’ll receive a reset link shortly.' });
+      return res.status(200).json({
+        message: 'If that email exists, you’ll receive a reset OTP shortly.',
+      });
     }
 
-    const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+    const otp = generateOtp();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); 
 
     await prisma.user.update({
       where: { email },
-      data: { resetToken: token, resetTokenExpiresAt: expiresAt }
+      data: {
+        resetOtp: otp,
+        resetOtpExpiresAt: expiresAt,
+        resetToken: null,
+        resetTokenExpiresAt: null,
+      },
     });
 
-    const resetUrl = `${process.env.FRONTEND_URL}/auth/reset-password?token=${token}`;
-    await sendResetPasswordEmail(user.name, user.email, resetUrl);
+    await sendResetPasswordEmail(user.name, user.email, otp);
 
-    return res.status(200).json({ message: 'If that email exists, you’ll receive a reset link shortly.' });
-  } catch {
+    return res.status(200).json({
+      message: 'If that email exists, you’ll receive a reset OTP shortly.',
+    });
+  } catch (err) {
+    console.error('ForgotPassword Error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 };
+
 
 export const resetPassword = async (req, res) => {
   
@@ -248,26 +257,66 @@ export const resetPassword = async (req, res) => {
   }
 
   try {
-    const user = await prisma.user.findFirst({
-      where: {
-        resetToken: token,
-        resetTokenExpiresAt: { gt: new Date() }
-      }
-    });
-    if (!user) {
+    let payload;
+    try {
+      payload = jwt.verify(token, JWT_SECRET);
+    } catch {
       return res.status(400).json({ error: 'Invalid or expired reset token' });
+    }
+
+    if (payload.purpose !== 'password_reset' || !payload.sub) {
+      return res.status(400).json({ error: 'Invalid reset token' });
     }
 
     const hashed = await bcrypt.hash(newPassword, 10);
     await prisma.user.update({
-      where: { id: user.id },
-      data: { password: hashed, resetToken: null, resetTokenExpiresAt: null }
+      where: { id: payload.sub },
+      data: { password: hashed },
     });
+
     return res.status(200).json({ message: 'Password reset successfully. You can now log in.' });
-  } catch {
+  } catch (err) {
+    console.error('ResetPassword Error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+export const verifyResetOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return res.status(400).json({ error: 'Email and OTP are required' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user || !user.resetOtp || !user.resetOtpExpiresAt) {
+      return res.status(400).json({ error: 'Invalid or expired reset request' });
+    }
+    if (user.resetOtp !== otp) {
+      return res.status(400).json({ error: 'Invalid OTP' });
+    }
+    if (user.resetOtpExpiresAt < new Date()) {
+      return res.status(400).json({ error: 'OTP has expired, please request a new one' });
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { resetOtp: null, resetOtpExpiresAt: null },
+    });
+
+    const resetToken = jwt.sign(
+      { sub: user.id, purpose: 'password_reset' },
+      JWT_SECRET,
+      { expiresIn: '10m' }
+    );
+
+    return res.status(200).json({ resetToken });
+  } catch (err) {
+    console.error('verifyResetOtp Error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 
 export const applyForLandlord = async (req, res) => {
 
