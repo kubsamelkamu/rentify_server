@@ -12,7 +12,6 @@ router.post('/verify-otp', verifyOtp );
 router.post('/resend-otp', resendOtp ); 
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
-router.post('/verify-reset-otp',  verifyResetOtp);
 router.post('/apply-landlord',auth,upload.array('docs'),applyForLandlord);
 
 export default router;
