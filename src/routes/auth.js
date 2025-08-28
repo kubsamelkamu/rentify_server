@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import {register,login,verifyOtp ,forgotPassword,resetPassword,applyForLandlord, resendOtp, verifyResetOtp } from '../controllers/auth.js';
+import {register,login,verifyOtp ,forgotPassword,resetPassword,applyForLandlord, resendOtp } from '../controllers/auth.js';
 import  auth  from '../middlewares/auth.js';
 
 const router = Router();
