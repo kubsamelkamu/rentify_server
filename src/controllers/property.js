@@ -123,22 +123,31 @@ export const exportProperties = async (req, res) => {
   }
 };
 
-
 export const getAllProperties = async (req, res) => {
-  
   try {
-    const {city,minPrice,maxPrice,minBedrooms,maxBedrooms,propertyType,amenities,availableFrom,availableTo,page,limit,
+    const {
+      city,
+      minPrice,
+      maxPrice,
+      minBedrooms,
+      maxBedrooms,
+      propertyType,
+      amenities,
+      availableFrom,
+      availableTo,
+      page,
+      limit,
     } = req.query;
+
+    const { userId } = req.user || {};
 
     const pageNum = Math.max(parseInt(page, 10) || 1, 1);
     const limitNum = Math.max(parseInt(limit, 10) || 9, 1);
     const skip = (pageNum - 1) * limitNum;
 
-    const where = { status: 'APPROVED' };
+    const where= { status: 'APPROVED' };
 
-    if (typeof city === 'string' && city.trim()) {
-      where.city = { contains: city.trim(), mode: 'insensitive' };
-    }
+    if (city?.trim()) where.city = { contains: city.trim(), mode: 'insensitive'};
     if (minPrice || maxPrice) {
       where.rentPerMonth = {};
       if (minPrice) where.rentPerMonth.gte = parseFloat(minPrice);
@@ -149,11 +158,12 @@ export const getAllProperties = async (req, res) => {
       if (minBedrooms) where.numBedrooms.gte = parseInt(minBedrooms, 10);
       if (maxBedrooms) where.numBedrooms.lte = parseInt(maxBedrooms, 10);
     }
-    if (propertyType && typeof propertyType === 'string') {
-      where.propertyType = propertyType;
-    }
-    if (amenities && typeof amenities === 'string') {
-      const list = amenities.split(',').map((a) => a.trim()).filter(Boolean);
+    if (propertyType) where.propertyType = propertyType;
+    if (amenities) {
+      const list = amenities
+        .split('')
+        .map((a) => a.trim())
+        .filter(Boolean);
       if (list.length) where.amenities = { hasEvery: list };
     }
     if (availableFrom && availableTo) {
@@ -169,7 +179,8 @@ export const getAllProperties = async (req, res) => {
       }
     }
 
-    const [total, data] = await Promise.all([
+
+    const [total, properties] = await Promise.all([
       prisma.property.count({ where }),
       prisma.property.findMany({
         where,
@@ -179,20 +190,36 @@ export const getAllProperties = async (req, res) => {
         include: {
           landlord: { select: { id: true, name: true, email: true } },
           images: true,
+          likes: userId ? { where: { userId }, select: { id: true } } : false,
         },
       }),
     ]);
 
-    res.json({ data, total, page: pageNum, limit: limitNum });
-  } catch (error) {
-    console.error('getAllProperties error:', error);
+
+    const mappedData = await Promise.all(
+      properties.map(async (p) => {
+        const likesCount = await prisma.like.count({ where: { propertyId: p.id } });
+        return {
+          ...p,
+          likesCount,
+          likedByUser: p.likes && p.likes.length > 0,
+        };
+      })
+    );
+
+    res.json({ data: mappedData, total, page: pageNum, limit: limitNum });
+  } catch (err) {
+    console.error('getAllProperties error:', err);
     res.status(500).json({ error: 'Could not fetch properties' });
   }
 };
 
+
 export const getPropertyById = async (req, res) => {
-  
+
   const { id } = req.params;
+  const { userId } = req.user || {};
+
   try {
     const property = await prisma.property.findUnique({
       where: { id },
@@ -203,19 +230,28 @@ export const getPropertyById = async (req, res) => {
           include: { sender: { select: { id: true, name: true } } },
           orderBy: { sentAt: 'asc' },
         },
+        likes: userId ? { where: { userId }, select: { id: true } } : false,
       },
     });
 
-    if (!property) {
-      return res.status(404).json({ error: 'Property not found' });
-    }
+    if (!property) return res.status(404).json({ error: 'Property not found' });
 
-    const { Message, ...rest } = property;
-    res.json({ ...rest, messages: Message });
-  } catch {
-    res.status(500).json({ error: 'Could not fetch property' });
+    const likesCount = await prisma.like.count({ where: { propertyId: property.id } });
+
+    const { Message, likes, ...rest } = property;
+
+    res.json({
+      ...rest,
+      messages: Message,
+      likesCount,
+      likedByUser: likes && likes.length > 0,
+    });
+  } catch (err) {
+    console.error('getPropertyById error:', err);
+    res.status(500).json({ error: 'Could not fetch property'});
   }
 };
+
 
 export const updateProperty = async (req, res) => {
 
@@ -339,5 +375,48 @@ export const uploadPropertyImages = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Could not upload images' });
+  }
+};
+
+export const likeProperty = async (req, res) => {
+
+  const { userId } = req.user;
+  const { id: propertyId } = req.params;
+
+  try {
+
+    const property = await prisma.property.findUnique({ where: { id: propertyId } });
+    if (!property) return res.status(404).json({ error: 'Property not found' });
+
+    await prisma.Like?.create({
+      data: { userId, propertyId },
+    });
+
+    const count = await prisma.Like.count({ where: { propertyId } });
+    res.json({ message:'Property liked', likes: count });
+  } catch (err) {
+    if (err.code === 'P2002') {
+      return res.status(400).json({ error: 'You already liked this property' });
+    }
+    console.error('likeProperty error:', err);
+    res.status(500).json({ error: 'Could not like property' });
+  }
+};
+
+export const unlikeProperty = async (req, res) => {
+  
+  const { userId } = req.user;
+  const { id: propertyId } = req.params;
+
+  try {
+    await prisma.Like?.delete({
+      where: { userId_propertyId: { userId, propertyId } },
+    });
+
+    const count = await prisma.Like.count({ where: { propertyId } });
+    res.json({ message: 'Property unliked', likes: count });
+  } catch (err) {
+    console.error('unlikeProperty error:', err);
+    res.status(500).json({ error: 'Could not unlike property' });
   }
 };
