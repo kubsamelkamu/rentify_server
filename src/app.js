@@ -14,7 +14,7 @@ import propertyRoutes from './routes/property.js';
 import reviewRoutes from './routes/review.js';
 import userRoutes from './routes/user.js';
 import recommendorRoutes from './routes/recommendor.js';
-import recommendationProxy from './routes/getrecommend.js'
+import recommendationProxy from './routes/getrecommend.js';
 
 dotenv.config();
 const app = express();
