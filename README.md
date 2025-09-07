@@ -1,7 +1,5 @@
 # Rentify Server – Backend
 
-# Rentify Server – Backend  
-
 An **Express.js**, **JavaScript**, and **Prisma** API server powering the Rentify platform with endpoints for authentication, properties, bookings, payments, and real-time chat.  
 
 Beyond the core APIs, this backend also integrates with a dedicated recommendation engine: [Rentify Recommendor Service](https://github.com/kubsamelkamu/Rentify_recommendor).  

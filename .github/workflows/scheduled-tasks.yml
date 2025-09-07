@@ -2,7 +2,7 @@ name: Scheduled Backend Tasks
 
 on:
   schedule:
-    - cron: '0 6 * * *' 
+    - cron: '0 6 * * *'  # Runs every day at 06:00 UTC
   workflow_dispatch:
 
 jobs:
@@ -13,13 +13,24 @@ jobs:
       DATABASE_URL: ${{ secrets.DATABASE }}
       EMAIL_SENDER_NAME: ${{ secrets.EMAIL_SENDER_NAME }}
       EMAIL_SENDER_ADDRESS: ${{ secrets.EMAIL_SENDER_ADDRESS }}
+
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm ci
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint with auto-fix
+        run: npx eslint . --fix || true
+
       - name: Export recommendation dataset
         run: node scripts/exportdata.js
+
       - name: Send recommendation emails
         run: node scripts/sendRecommendationEmails.js
