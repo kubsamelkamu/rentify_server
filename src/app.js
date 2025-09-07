@@ -13,6 +13,8 @@ import profileRoutes from './routes/profile.js';
 import propertyRoutes from './routes/property.js';
 import reviewRoutes from './routes/review.js';
 import userRoutes from './routes/user.js';
+import recommendorRoutes from './routes/recommendor.js';
+import recommendationProxy from './routes/getrecommend.js'
 
 dotenv.config();
 const app = express();
@@ -22,6 +24,7 @@ export const prisma = new PrismaClient();
 app.use(cors());
 app.use(json());
 
+app.use('/api/recommendation-proxy', recommendationProxy);
 app.use('/api/admin', adminRoutes);
 app.use('/api/super-admin', superAdminRoutes);
 app.use('/api/auth', authRoutes);
@@ -33,7 +36,8 @@ app.use('/api/users', profileRoutes);
 app.use('/api/properties', propertyRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api', userRoutes);
-
+app.use('/api/recommendation', recommendorRoutes);
+app.use('/api/recommendation-proxy', recommendationProxy);
 app.get('/health/status', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'Server is healthy!' });
 });
