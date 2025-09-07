@@ -236,6 +236,12 @@ Runs the test suite.
 | POST   | `/api/contact`     | Send a contact message        |
 | POST   | `/api/newsletter`  | Subscribe to newsletter       |
 
+### Recommendation System
+| Method | Path                                 | Description                                                                 |
+| ------ | ------------------------------------ | --------------------------------------------------------------------------- |
+| GET    | `/export-recommendation-data`        | Export users, properties, bookings, likes, and reviews data in CSV format   |
+| GET    | `/getrecommend`                      | Get property recommendations from Python Rentify recommendation service     |
+
 ### Admin (all routes require admin role)
 | Method | Path                                   | Description                                   |
 | ------ | -------------------------------------- | --------------------------------------------- |
@@ -255,6 +261,13 @@ Runs the test suite.
 | PUT    | `/api/admin/bookings/:id/status`       | Update booking status                         |
 | GET    | `/api/admin/reviews`                   | List all reviews                              |
 | DELETE | `/api/admin/reviews/:id`               | Delete a review                               |
+
+### Super Admin (requires SUPER_ADMIN role)
+| Method | Path                | Description                    |
+| ------ | ------------------- | ------------------------------ |
+| GET    | `/admins`           | List all admin users           |
+| POST   | `/admins`           | Create a new admin user        |
+| DELETE | `/admins/:id`       | Delete an admin user by ID     |
 
 ## 🤝 Contributing
 
