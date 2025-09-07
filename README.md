@@ -110,6 +110,9 @@ An **Express.js**, **Javascript**, and **Prisma** API server powering the Rentif
 │   │   ├── property.js
 │   │   ├── review.js
 │   │   └── user.js
+|   |   |___ SUPER_ADMIN
+|   |   |___recommendor
+|   |   |___getrecommend
 │   └── utils/
 │       └── emailService.js
 ```
@@ -179,9 +182,9 @@ Runs the test suite.
 | ------ | ---------------------------- | --------------------------------- |
 | POST   | `/api/auth/register`         | Register a new user               |
 | POST   | `/api/auth/login`            | Log in an existing user           |
-| POST   | `/api/auth/verify`           | Verify email/token                |
+| POST   | `/api/auth/verify`           | Verify email                      |
 | POST   | `/api/auth/forgot-password`  | Request password reset            |
-| POST   | `/api/auth/reset-password`   | Reset password via token          |
+| POST   | `/api/auth/reset-password`   | Reset password via otp            |
 | POST   | `/api/auth/apply-landlord`   | Submit landlord application       |
 
 ### Users
@@ -189,7 +192,7 @@ Runs the test suite.
 | ------ | ----------------------------- | ------------------------------------ |
 | GET    | `/api/users/me`               | Get current user profile             |
 | PUT    | `/api/users/me`               | Update current user profile          |
-| POST   | `/api/users/apply-landlord`   | (alias) Apply to become landlord      |
+| POST   | `/api/users/apply-landlord`   | (alias) Apply to become landlord     |
 | PUT    | `/api/users/:id/role`         | Change a user’s role (admin only)    |
 
 ### Properties
