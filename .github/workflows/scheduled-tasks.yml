@@ -1,0 +1,25 @@
+name: Scheduled Backend Tasks
+
+on:
+  schedule:
+    - cron: '0 6 * * *' 
+  workflow_dispatch:
+
+jobs:
+  export_and_notify:
+    runs-on: ubuntu-latest
+    env:
+      BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+      DATABASE_URL: ${{ secrets.DATABASE }}
+      EMAIL_SENDER_NAME: ${{ secrets.EMAIL_SENDER_NAME }}
+      EMAIL_SENDER_ADDRESS: ${{ secrets.EMAIL_SENDER_ADDRESS }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - name: Export recommendation dataset
+        run: node scripts/exportdata.js
+      - name: Send recommendation emails
+        run: node scripts/sendRecommendationEmails.js
