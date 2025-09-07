@@ -1,8 +1,18 @@
 # Rentify Server – Backend
 
-An **Express.js**, **Javascript**, and **Prisma** API server powering the Rentify platform with endpoints for Athentication, properties, bookings, payments, authentication, and real‑time chat.
+# Rentify Server – Backend  
 
---- 
+An **Express.js**, **JavaScript**, and **Prisma** API server powering the Rentify platform with endpoints for authentication, properties, bookings, payments, and real-time chat.  
+
+Beyond the core APIs, this backend also integrates with a dedicated recommendation engine: [Rentify Recommendor Service](https://github.com/kubsamelkamu/Rentify_recommendor).  
+
+- A **cron job** (set up via GitHub Actions) automatically exports datasets (users, properties, bookings, likes, and reviews) from this backend and syncs them with the recommendation service.  
+- The recommendation engine provides personalized suggestions for:  
+  - **Tenants** → Recommended properties tailored to their interests and activity.  
+  - **Landlords** → Potential tenants who are a strong match for their properties.  
+- The backend then sends **transactional email notifications** to tenants and landlords with these recommendations, ensuring timely and data-driven engagement.  
+
+This architecture enables **automation**, **personalization**, and **seamless communication**, making Rentify smarter and more user-centric.  
 ## ✨ Features
 
 - **User Authentication & Authorization**  
