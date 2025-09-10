@@ -28,7 +28,7 @@ jobs:
         run: npm ci
 
       - name: Generate Prisma Client
-        run: npx prisma generate --schema=src/prisma/prisma.schema
+        run: npx prisma generate --schema=src/prisma/schema.prisma
 
 
       - name: Run ESLint with auto-fix
